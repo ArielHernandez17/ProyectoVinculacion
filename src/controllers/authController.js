@@ -1,4 +1,5 @@
 const { pool } = require('../config/db');
+const { generarToken } = require('../config/jwt');
 
 async function login(req, res) {
     const { correo, nombre, rol } = req.body;
@@ -9,7 +10,6 @@ async function login(req, res) {
     let conn;
     try {
         conn = await pool.getConnection();
-        // Buscar si el usuario ya existe por correo
         let users = await conn.query('SELECT id, nombre, rol_id FROM usuarios WHERE correo = ?', [correo]);
         let user = users[0];
         let rolId;
@@ -18,28 +18,27 @@ async function login(req, res) {
         else rolId = 3;
 
         if (!user) {
-            // Registrar nuevo usuario
             const result = await conn.query(
                 'INSERT INTO usuarios (correo, nombre, rol_id) VALUES (?, ?, ?)',
                 [correo, nombre, rolId]
             );
             user = { id: result.insertId, nombre, rol_id: rolId };
         } else {
-            // Si ya existe, se puede actualizar rol por si acaso (opcional)
             if (user.rol_id !== rolId) {
                 await conn.query('UPDATE usuarios SET rol_id = ? WHERE id = ?', [rolId, user.id]);
                 user.rol_id = rolId;
             }
         }
 
-        // Obtener nombre del rol
         const rolObj = await conn.query('SELECT nombre FROM roles WHERE id = ?', [user.rol_id]);
-        res.json({
+        const usuarioCompleto = {
             id: user.id,
             nombre: user.nombre,
             correo,
             rol: rolObj[0].nombre
-        });
+        };
+        const token = generarToken(usuarioCompleto);
+        res.json({ ...usuarioCompleto, token });
     } catch (err) {
         console.error(err);
         res.status(500).json({ error: 'Error en el login' });

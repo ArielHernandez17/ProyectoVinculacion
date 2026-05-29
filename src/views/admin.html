@@ -2,58 +2,125 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>Admin - Sistema Incidencias</title>
+    <title>Admin - Sistema Incidencias FES Aragón</title>
     <link rel="stylesheet" href="/css/styles.css">
 </head>
 <body>
     <div class="container">
-        <h1>Administración FES Aragón</h1>
         <div class="user-info" id="userInfo"></div>
+
         <div class="tabs">
-            <button class="tab-btn active" data-tab="usuarios">Usuarios</button>
+            <button class="tab-btn active" data-tab="incidencias">Incidencias</button>
+            <button class="tab-btn" data-tab="usuarios">Usuarios</button>
             <button class="tab-btn" data-tab="edificios">Edificios</button>
             <button class="tab-btn" data-tab="salones">Salones</button>
             <button class="tab-btn" data-tab="estadisticas">Estadísticas</button>
         </div>
-        <!-- Pestaña Usuarios -->
-        <div id="usuarios" class="tab-content active">
-            <h2>Lista de Usuarios</h2>
-            <table id="usuariosTable"><thead><tr><th>ID</th><th>Correo</th><th>Nombre</th><th>Rol</th></tr></thead><tbody></tbody></table>
+
+        <div class="main-grid">
+            <div class="content-scroll">
+                <!-- Pestaña Incidencias (nueva) -->
+                <div id="incidencias" class="tab-content card active">
+                    <div class="card-header">
+                        <h2>Todas las Incidencias</h2>
+                        <button id="exportarCSVIncidencias" class="btn-secondary">Exportar a CSV</button>
+                    </div>
+                    <div class="filters-bar">
+                        <div class="filter-group">
+                            <label>Filtrar por estado</label>
+                            <select id="filtroEstadoAdmin">
+                                <option value="">Todos</option>
+                                <option value="Pendiente">Pendiente</option>
+                                <option value="En Proceso">En Proceso</option>
+                                <option value="Resuelto">Resuelto</option>
+                            </select>
+                        </div>
+                    </div>
+                    <table id="incidenciasAdminTable">
+                        <thead>
+                            <tr>
+                                <th>ID</th><th>Edificio</th><th>Salón</th><th>Descripción</th>
+                                <th>Estado</th><th>Comentario</th><th>Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                    <div class="pagination">
+                        <button id="btn-anterior-admin">Anterior</button>
+                        <span>Página <span id="pagina-actual-admin">1</span> de <span id="total-paginas-admin">1</span></span>
+                        <button id="btn-siguiente-admin">Siguiente</button>
+                    </div>
+                </div>
+
+                <!-- Pestaña Usuarios -->
+                <div id="usuarios" class="tab-content card">
+                    <div class="card-header">
+                        <h2>Lista de Usuarios</h2>
+                    </div>
+                    <table id="usuariosTable">
+                        <thead><tr><th>ID</th><th>Correo</th><th>Nombre</th><th>Rol</th></tr></thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+
+                <!-- Pestaña Edificios -->
+                <div id="edificios" class="tab-content card">
+                    <div class="card-header">
+                        <h2>Gestión de Edificios</h2>
+                    </div>
+                    <form id="edificioForm" style="margin-bottom: 1rem;">
+                        <input type="text" id="edificioNombre" placeholder="Nombre del edificio" required>
+                        <button type="submit">Agregar Edificio</button>
+                    </form>
+                    <table id="edificiosTable">
+                        <thead><tr><th>ID</th><th>Nombre</th><th>Acciones</th></tr></thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+
+                <!-- Pestaña Salones -->
+                <div id="salones" class="tab-content card">
+                    <div class="card-header">
+                        <h2>Gestión de Salones</h2>
+                    </div>
+                    <div class="filters-bar">
+                        <div class="filter-group">
+                            <label>Filtrar por edificio</label>
+                            <select id="selectEdificioSalon">
+                                <option value="">-- Todos los edificios --</option>
+                            </select>
+                        </div>
+                    </div>
+                    <form id="salonForm" style="margin: 1rem 0;">
+                        <input type="text" id="salonNombre" placeholder="Nombre del salón (ej. A110)" required>
+                        <input type="hidden" id="salonEdificioId" value="">
+                        <button type="submit">Agregar Salón</button>
+                    </form>
+                    <table id="salonesTable">
+                        <thead><tr><th>ID</th><th>Nombre</th><th>Edificio</th><th>Acciones</th></tr></thead>
+                        <tbody></tbody>
+                    </table>
+                    <div class="pagination">
+                        <button id="btn-anterior-salones">Anterior</button>
+                        <span>Página <span id="pagina-actual-salones">1</span> de <span id="total-paginas-salones">1</span></span>
+                        <button id="btn-siguiente-salones">Siguiente</button>
+                    </div>
+                </div>
+
+                <!-- Pestaña Estadísticas -->
+                <div id="estadisticas" class="tab-content card">
+                    <div class="card-header">
+                        <h2>Reportes por Edificio y Estado</h2>
+                        <button id="exportarCSV" class="btn-secondary">Exportar a CSV</button>
+                    </div>
+                    <table id="statsTable">
+                        <thead><tr><th>Edificio</th><th>Estado</th><th>Cantidad</th></tr></thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </div>
         </div>
-        <!-- Pestaña Edificios (CRUD) -->
-        <div id="edificios" class="tab-content">
-            <h2>Gestión de Edificios</h2>
-            <form id="edificioForm">
-                <input type="text" id="edificioNombre" placeholder="Nombre del edificio" required>
-                <button type="submit">Agregar Edificio</button>
-            </form>
-            <table id="edificiosTable"><thead><tr><th>ID</th><th>Nombre</th><th>Acciones</th></tr></thead><tbody></tbody></table>
-        </div>
-        <!-- Pestaña Salones -->
-<div id="salones" class="tab-content">
-    <h2>Gestión de Salones</h2>
-    <div>
-        <label>Filtrar por edificio:</label>
-        <select id="selectEdificioSalon">
-            <option value="">-- Todos los edificios --</option>
-        </select>
-        <button id="btnCargarSalones">Cargar Salones</button>
-    </div>
-    <form id="salonForm" style="margin-top: 20px;">
-        <input type="text" id="salonNombre" placeholder="Nombre del salón (ej. A110)" required>
-        <input type="hidden" id="salonEdificioId" value="">
-        <button type="submit">Agregar Salón</button>
-    </form>
-    <table id="salonesTable">
-        <thead><tr><th>ID</th><th>Nombre</th><th>Edificio</th><th>Acciones</th></tr></thead>
-        <tbody></tbody>
-    </table>
-</div>
-        <!-- Pestaña Estadísticas -->
-        <div id="estadisticas" class="tab-content">
-            <h2>Reportes por Edificio y Estado</h2>
-            <table id="statsTable"><thead><tr><th>Edificio</th><th>Estado</th><th>Cantidad</th></tr></thead><tbody></tbody></table>
-        </div>
+
         <button id="logoutBtn" class="logout">Cerrar sesión</button>
     </div>
     <script src="/js/main.js"></script>

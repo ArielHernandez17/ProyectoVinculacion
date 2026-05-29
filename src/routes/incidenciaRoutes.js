@@ -1,27 +1,33 @@
 const express = require('express');
 const router = express.Router();
 const incidenciaController = require('../controllers/incidenciaController');
+const { verificarToken, verificarRol } = require('../config/jwt');
 
-// Endpoints públicos
+// Rutas públicas (no requieren token)
 router.get('/salones', incidenciaController.getSalones);
 router.post('/incidencias', incidenciaController.createIncidencia);
-router.get('/incidencias', incidenciaController.getIncidencias);
-router.put('/incidencias/:id/estado', incidenciaController.updateEstado);
-router.get('/estadisticas', incidenciaController.getEstadisticas);
 
-// CRUD edificios
-router.get('/edificios', incidenciaController.listEdificios);
-router.post('/edificios', incidenciaController.addEdificio);
-router.put('/edificios/:id', incidenciaController.editEdificio);
-router.delete('/edificios/:id', incidenciaController.removeEdificio);
+// Rutas protegidas (requieren token)
+router.get('/incidencias', verificarToken, incidenciaController.getIncidenciasPaginadas);
+router.put('/incidencias/:id/estado', verificarToken, incidenciaController.updateEstadoConHistorial);
+router.get('/incidencias/:id/historial', verificarToken, incidenciaController.getHistorial);
+router.post('/incidencias/:id/imagen', verificarToken, incidenciaController.subirImagen);
+router.get('/exportar/csv', verificarToken, verificarRol(['Admin']), incidenciaController.exportarIncidenciasCSV);
+router.get('/estadisticas', verificarToken, verificarRol(['Admin']), incidenciaController.getEstadisticas);
 
-// Usuarios
-router.get('/usuarios', incidenciaController.listUsuarios);
+// CRUD edificios (solo admin)
+router.get('/edificios', verificarToken, incidenciaController.listEdificios);
+router.post('/edificios', verificarToken, verificarRol(['Admin']), incidenciaController.addEdificio);
+router.put('/edificios/:id', verificarToken, verificarRol(['Admin']), incidenciaController.editEdificio);
+router.delete('/edificios/:id', verificarToken, verificarRol(['Admin']), incidenciaController.removeEdificio);
 
-// CRUD Salones (para admin)
-router.get('/salones/todos', incidenciaController.listSalones);
-router.post('/salones', incidenciaController.addSalon);
-router.put('/salones/:id', incidenciaController.editSalon);
-router.delete('/salones/:id', incidenciaController.removeSalon);
+// Usuarios (solo admin)
+router.get('/usuarios', verificarToken, verificarRol(['Admin']), incidenciaController.listUsuarios);
+
+// CRUD Salones (solo admin)
+router.get('/salones/todos', verificarToken, verificarRol(['Admin']), incidenciaController.getSalonesPaginados);
+router.post('/salones', verificarToken, verificarRol(['Admin']), incidenciaController.addSalon);
+router.put('/salones/:id', verificarToken, verificarRol(['Admin']), incidenciaController.editSalon);
+router.delete('/salones/:id', verificarToken, verificarRol(['Admin']), incidenciaController.removeSalon);
 
 module.exports = router;

@@ -1,7 +1,25 @@
-// Variables globales
+// =========================================================================
+// Variables globales y configuración inicial
+// =========================================================================
 let usuarioActual = null;
+let token = null;
 
+// Configuración de paginación para incidencias (revisor y admin)
+let paginaActualIncidencias = 1;
+let totalPaginasIncidencias = 1;
+let filtroEstadoActual = null;
+
+let paginaActualSalones = 1;
+let totalPaginasSalones = 1;
+let edificioFiltroSalones = null;
+
+let paginaActualAdminIncidencias = 1;
+let totalPaginasAdminIncidencias = 1;
+let filtroEstadoAdmin = '';
+
+// =========================================================================
 // Notificaciones flotantes
+// =========================================================================
 function mostrarNotificacion(mensaje, tipo = 'success') {
     const notif = document.createElement('div');
     notif.className = `notification ${tipo}`;
@@ -13,14 +31,34 @@ function mostrarNotificacion(mensaje, tipo = 'success') {
     }, 3000);
 }
 
-// Al cargar la página, según la vista, ejecutar funciones
+// =========================================================================
+// Funciones auxiliares para fetch con token
+// =========================================================================
+async function fetchWithAuth(url, options = {}) {
+    if (!options.headers) options.headers = {};
+    options.headers['Authorization'] = `Bearer ${token}`;
+    options.headers['Content-Type'] = 'application/json';
+    const response = await fetch(url, options);
+    if (response.status === 401 || response.status === 403) {
+        mostrarNotificacion('Sesión expirada, vuelva a iniciar sesión', 'error');
+        sessionStorage.clear();
+        window.location.href = '/views/login.html';
+        throw new Error('No autorizado');
+    }
+    return response;
+}
+
+// =========================================================================
+// Carga inicial según la vista
+// =========================================================================
 document.addEventListener('DOMContentLoaded', () => {
     const path = window.location.pathname;
     if (path.includes('login.html')) {
         document.getElementById('loginForm')?.addEventListener('submit', handleLogin);
     } else {
         const userStr = sessionStorage.getItem('usuario');
-        if (!userStr) {
+        token = sessionStorage.getItem('token');
+        if (!userStr || !token) {
             window.location.href = '/views/login.html';
             return;
         }
@@ -38,7 +76,9 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 });
 
-// ========== LOGIN ==========
+// =========================================================================
+// Login con JWT
+// =========================================================================
 async function handleLogin(e) {
     e.preventDefault();
     const correo = document.getElementById('correo').value;
@@ -52,7 +92,10 @@ async function handleLogin(e) {
         });
         if (!res.ok) throw new Error('Error en login');
         const data = await res.json();
-        sessionStorage.setItem('usuario', JSON.stringify(data));
+        sessionStorage.setItem('usuario', JSON.stringify({ id: data.id, nombre: data.nombre, correo: data.correo, rol: data.rol }));
+        sessionStorage.setItem('token', data.token);
+        token = data.token;
+        usuarioActual = { id: data.id, nombre: data.nombre, correo: data.correo, rol: data.rol };
         if (data.rol === 'Admin') window.location.href = '/views/admin.html';
         else if (data.rol === 'Revisor') window.location.href = '/views/revisor.html';
         else window.location.href = '/views/usuario.html';
@@ -69,14 +112,16 @@ function mostrarInfoUsuario() {
 }
 
 function cerrarSesion() {
-    sessionStorage.removeItem('usuario');
+    sessionStorage.clear();
     window.location.href = '/views/login.html';
 }
 
-// ========== USUARIO ==========
+// =========================================================================
+// VISTA USUARIO
+// =========================================================================
 async function cargarEdificios() {
     try {
-        const res = await fetch('/api/edificios');
+        const res = await fetchWithAuth('/api/edificios');
         const edificios = await res.json();
         const selectEdificio = document.getElementById('edificio');
         selectEdificio.innerHTML = '<option value="">Seleccione edificio</option>';
@@ -87,9 +132,7 @@ async function cargarEdificios() {
             selectEdificio.appendChild(option);
         });
         selectEdificio.addEventListener('change', cargarSalones);
-    } catch (err) {
-        console.error(err);
-    }
+    } catch (err) { console.error(err); }
 }
 
 async function cargarSalones() {
@@ -101,7 +144,7 @@ async function cargarSalones() {
         return;
     }
     try {
-        const res = await fetch(`/api/salones?edificio_id=${edificioId}`);
+        const res = await fetchWithAuth(`/api/salones?edificio_id=${edificioId}`);
         const salones = await res.json();
         selectSalon.innerHTML = '<option value="">Seleccione salón</option>';
         salones.forEach(salon => {
@@ -111,9 +154,7 @@ async function cargarSalones() {
             selectSalon.appendChild(option);
         });
         selectSalon.disabled = false;
-    } catch (err) {
-        console.error(err);
-    }
+    } catch (err) { console.error(err); }
 }
 
 async function enviarReporte(e) {
@@ -124,15 +165,10 @@ async function enviarReporte(e) {
         mostrarNotificacion('Seleccione un salón', 'error');
         return;
     }
-    const data = {
-        descripcion,
-        usuario_id: usuarioActual.id,
-        salon_id
-    };
+    const data = { descripcion, usuario_id: usuarioActual.id, salon_id };
     try {
-        const res = await fetch('/api/incidencias', {
+        const res = await fetchWithAuth('/api/incidencias', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(data)
         });
         if (res.ok) {
@@ -142,22 +178,22 @@ async function enviarReporte(e) {
         } else {
             mostrarNotificacion('Error al enviar', 'error');
         }
-    } catch (err) {
-        mostrarNotificacion('Error de conexión', 'error');
-    }
+    } catch (err) { mostrarNotificacion('Error de conexión', 'error'); }
 }
 
-// ========== REVISOR ==========
-async function cargarIncidenciasRevisor() {
+// =========================================================================
+// VISTA REVISOR (sin historial)
+// =========================================================================
+async function cargarIncidenciasRevisor(pagina = 1) {
+    paginaActualIncidencias = pagina;
     try {
-        const res = await fetch('/api/incidencias?estado=Pendiente');
-        const pendientes = await res.json();
-        const res2 = await fetch('/api/incidencias?estado=En Proceso');
-        const enProceso = await res2.json();
-        const todas = [...pendientes, ...enProceso];
+        const estadoParam = filtroEstadoActual ? `&estado=${filtroEstadoActual}` : '';
+        const res = await fetchWithAuth(`/api/incidencias?pagina=${pagina}&limite=5${estadoParam}`);
+        const data = await res.json();
+        totalPaginasIncidencias = data.totalPaginas;
         const tbody = document.querySelector('#incidenciasTable tbody');
         tbody.innerHTML = '';
-        todas.forEach(inc => {
+        data.data.forEach(inc => {
             const row = tbody.insertRow();
             row.insertCell(0).textContent = inc.id;
             row.insertCell(1).textContent = inc.edificio_nombre;
@@ -178,75 +214,237 @@ async function cargarIncidenciasRevisor() {
                 btnResuelto.className = 'accion';
                 btnResuelto.onclick = () => cambiarEstadoConComentario(inc.id, 'Resuelto');
                 cellAcciones.appendChild(btnResuelto);
-            } else {
-                cellAcciones.textContent = '---';
+            }
+            const btnImagen = document.createElement('button');
+            btnImagen.textContent = 'Subir foto';
+            btnImagen.className = 'accion';
+            btnImagen.onclick = () => subirImagen(inc.id);
+            cellAcciones.appendChild(btnImagen);
+            if (inc.imagen_path) {
+                const verImg = document.createElement('button');
+                verImg.textContent = 'Ver foto';
+                verImg.className = 'accion';
+                verImg.onclick = () => window.open(inc.imagen_path, '_blank');
+                cellAcciones.appendChild(verImg);
             }
         });
-    } catch (err) {
-        console.error(err);
-    }
+        document.getElementById('pagina-actual').textContent = pagina;
+        document.getElementById('total-paginas').textContent = totalPaginasIncidencias;
+        document.getElementById('btn-anterior').disabled = (pagina === 1);
+        document.getElementById('btn-siguiente').disabled = (pagina === totalPaginasIncidencias);
+    } catch (err) { console.error(err); }
+}
+
+function cambiarPaginaIncidencias(delta) {
+    let nueva = paginaActualIncidencias + delta;
+    if (nueva < 1) nueva = 1;
+    if (nueva > totalPaginasIncidencias) nueva = totalPaginasIncidencias;
+    cargarIncidenciasRevisor(nueva);
+}
+
+function filtrarPorEstado(estado) {
+    filtroEstadoActual = estado;
+    cargarIncidenciasRevisor(1);
 }
 
 async function cambiarEstadoConComentario(id, nuevoEstado) {
-    let comentario = '';
-    if (nuevoEstado === 'En Proceso') {
-        comentario = prompt('Ingrese un comentario sobre la acción (ej. "Se asignó al equipo de limpieza"):');
-    } else if (nuevoEstado === 'Resuelto') {
-        comentario = prompt('Ingrese un comentario sobre la resolución (ej. "Se limpió el salón"):');
-    }
+    let comentario = prompt(`Ingrese un comentario para cambiar a "${nuevoEstado}":`);
     if (comentario === null) return;
     try {
-        const res = await fetch(`/api/incidencias/${id}/estado`, {
+        const res = await fetchWithAuth(`/api/incidencias/${id}/estado`, {
             method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ estado: nuevoEstado, comentario })
         });
         if (res.ok) {
-            mostrarNotificacion('Estado actualizado con comentario', 'success');
-            cargarIncidenciasRevisor();
+            mostrarNotificacion('Estado actualizado', 'success');
+            cargarIncidenciasRevisor(paginaActualIncidencias);
         } else {
             const err = await res.json();
             mostrarNotificacion('Error: ' + err.error, 'error');
         }
-    } catch (err) {
-        mostrarNotificacion('Error de red', 'error');
-    }
+    } catch (err) { mostrarNotificacion('Error de red', 'error'); }
 }
 
-// ========== ADMIN ==========
+async function subirImagen(id) {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'image/jpeg,image/png,image/jpg';
+    input.onchange = async (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        const formData = new FormData();
+        formData.append('imagen', file);
+        try {
+            const res = await fetch(`/api/incidencias/${id}/imagen`, {
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${token}` },
+                body: formData
+            });
+            if (res.ok) {
+                mostrarNotificacion('Imagen subida', 'success');
+                cargarIncidenciasRevisor(paginaActualIncidencias);
+            } else {
+                mostrarNotificacion('Error al subir imagen', 'error');
+            }
+        } catch (err) { mostrarNotificacion('Error de red', 'error'); }
+    };
+    input.click();
+}
+
+// =========================================================================
+// VISTA ADMIN (incluye nueva pestaña Incidencias)
+// =========================================================================
 function inicializarAdmin() {
+    // Pestañas
     const tabs = document.querySelectorAll('.tab-btn');
     tabs.forEach(btn => {
         btn.addEventListener('click', () => {
             const tabId = btn.dataset.tab;
-            document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
             document.getElementById(tabId).classList.add('active');
             tabs.forEach(b => b.classList.remove('active'));
             btn.classList.add('active');
+            if (tabId === 'incidencias') cargarIncidenciasAdmin();
             if (tabId === 'usuarios') cargarUsuarios();
             if (tabId === 'edificios') cargarEdificiosAdmin();
-            if (tabId === 'salones') {
-                cargarEdificiosParaSalones();
-                cargarTodosSalones();
-            }
+            if (tabId === 'salones') cargarSalonesAdmin(1);
             if (tabId === 'estadisticas') cargarEstadisticas();
         });
     });
+
+    // Cargar pestaña incidencias por defecto
+    cargarIncidenciasAdmin();
     cargarUsuarios();
     cargarEdificiosAdmin();
+    cargarSalonesAdmin(1);
     cargarEstadisticas();
+
+    // Eventos
     document.getElementById('edificioForm').addEventListener('submit', agregarEdificio);
     document.getElementById('salonForm').addEventListener('submit', agregarSalon);
-    document.getElementById('btnCargarSalones').addEventListener('click', () => {
-        const edificioId = document.getElementById('selectEdificioSalon').value;
-        if (edificioId) cargarSalonesPorEdificio(edificioId);
-        else cargarTodosSalones();
+    document.getElementById('exportarCSV')?.addEventListener('click', () => exportarCSV('estadisticas'));
+    document.getElementById('exportarCSVIncidencias')?.addEventListener('click', () => exportarCSV('incidencias'));
+    document.getElementById('btn-anterior-admin')?.addEventListener('click', () => cambiarPaginaAdminIncidencias(-1));
+    document.getElementById('btn-siguiente-admin')?.addEventListener('click', () => cambiarPaginaAdminIncidencias(1));
+    document.getElementById('filtroEstadoAdmin')?.addEventListener('change', (e) => {
+        filtroEstadoAdmin = e.target.value;
+        cargarIncidenciasAdmin(1);
+    });
+    document.getElementById('btn-anterior-salones')?.addEventListener('click', () => cambiarPaginaSalones(-1));
+    document.getElementById('btn-siguiente-salones')?.addEventListener('click', () => cambiarPaginaSalones(1));
+    document.getElementById('selectEdificioSalon')?.addEventListener('change', (e) => {
+        edificioFiltroSalones = e.target.value || null;
+        cargarSalonesAdmin(1);
     });
 }
 
+// ========== INCIDENCIAS PARA ADMIN (con historial) ==========
+async function cargarIncidenciasAdmin(pagina = 1) {
+    paginaActualAdminIncidencias = pagina;
+    try {
+        const estadoParam = filtroEstadoAdmin ? `&estado=${filtroEstadoAdmin}` : '';
+        const res = await fetchWithAuth(`/api/incidencias?pagina=${pagina}&limite=10${estadoParam}`);
+        const data = await res.json();
+        totalPaginasAdminIncidencias = data.totalPaginas;
+        const tbody = document.querySelector('#incidenciasAdminTable tbody');
+        tbody.innerHTML = '';
+        data.data.forEach(inc => {
+            const row = tbody.insertRow();
+            row.insertCell(0).textContent = inc.id;
+            row.insertCell(1).textContent = inc.edificio_nombre;
+            row.insertCell(2).textContent = inc.salon_nombre;
+            row.insertCell(3).textContent = inc.descripcion;
+            row.insertCell(4).textContent = inc.estado;
+            row.insertCell(5).textContent = inc.comentario || '---';
+            const cellAcciones = row.insertCell(6);
+            const btnHistorial = document.createElement('button');
+            btnHistorial.textContent = 'Ver historial';
+            btnHistorial.className = 'accion';
+            btnHistorial.onclick = () => verHistorial(inc.id);
+            cellAcciones.appendChild(btnHistorial);
+            if (inc.imagen_path) {
+                const verImg = document.createElement('button');
+                verImg.textContent = 'Ver foto';
+                verImg.className = 'accion';
+                verImg.onclick = () => window.open(inc.imagen_path, '_blank');
+                cellAcciones.appendChild(verImg);
+            }
+        });
+        document.getElementById('pagina-actual-admin').textContent = pagina;
+        document.getElementById('total-paginas-admin').textContent = totalPaginasAdminIncidencias;
+        document.getElementById('btn-anterior-admin').disabled = (pagina === 1);
+        document.getElementById('btn-siguiente-admin').disabled = (pagina === totalPaginasAdminIncidencias);
+    } catch (err) { console.error(err); }
+}
+
+function cambiarPaginaAdminIncidencias(delta) {
+    let nueva = paginaActualAdminIncidencias + delta;
+    if (nueva < 1) nueva = 1;
+    if (nueva > totalPaginasAdminIncidencias) nueva = totalPaginasAdminIncidencias;
+    cargarIncidenciasAdmin(nueva);
+}
+
+// ========== HISTORIAL (modal) ==========
+async function verHistorial(id) {
+    try {
+        const res = await fetchWithAuth(`/api/incidencias/${id}/historial`);
+        const historial = await res.json();
+        if (!historial.length) {
+            mostrarNotificacion('No hay historial de cambios para esta incidencia', 'info');
+            return;
+        }
+        let html = '<div style="max-height: 400px; overflow-y: auto;"><h3>Historial de cambios</h3><ul>';
+        historial.forEach(h => {
+            html += `<li><strong>${new Date(h.fecha_cambio).toLocaleString()}</strong> - ${h.usuario_nombre} cambió de ${h.estado_anterior} a ${h.estado_nuevo}<br>Comentario: ${h.comentario || 'Ninguno'}</li>`;
+        });
+        html += '</ul></div><button onclick="this.parentElement.remove()">Cerrar</button>';
+        const modal = document.createElement('div');
+        modal.className = 'modal';
+        modal.style.position = 'fixed';
+        modal.style.top = '0';
+        modal.style.left = '0';
+        modal.style.width = '100%';
+        modal.style.height = '100%';
+        modal.style.backgroundColor = 'rgba(0,0,0,0.5)';
+        modal.style.display = 'flex';
+        modal.style.alignItems = 'center';
+        modal.style.justifyContent = 'center';
+        modal.style.zIndex = '2000';
+        const content = document.createElement('div');
+        content.style.backgroundColor = 'white';
+        content.style.padding = '20px';
+        content.style.borderRadius = '12px';
+        content.style.maxWidth = '500px';
+        content.style.width = '90%';
+        content.innerHTML = html;
+        modal.appendChild(content);
+        document.body.appendChild(modal);
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) modal.remove();
+        });
+    } catch (err) { mostrarNotificacion('Error al obtener historial', 'error'); }
+}
+
+// ========== EXPORTAR CSV (para admin) ==========
+async function exportarCSV(tipo) {
+    try {
+        let url = '/api/exportar/csv';
+        if (tipo === 'incidencias' && filtroEstadoAdmin) url += `?estado=${filtroEstadoAdmin}`;
+        const res = await fetchWithAuth(url);
+        const blob = await res.blob();
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = `incidencias_${Date.now()}.csv`;
+        link.click();
+        URL.revokeObjectURL(link.href);
+        mostrarNotificacion('Exportación completada', 'success');
+    } catch (err) { mostrarNotificacion('Error al exportar', 'error'); }
+}
+
+// ========== CRUD USUARIOS, EDIFICIOS, SALONES, ESTADÍSTICAS ==========
 async function cargarUsuarios() {
     try {
-        const res = await fetch('/api/usuarios');
+        const res = await fetchWithAuth('/api/usuarios');
         const usuarios = await res.json();
         const tbody = document.querySelector('#usuariosTable tbody');
         tbody.innerHTML = '';
@@ -257,14 +455,12 @@ async function cargarUsuarios() {
             row.insertCell(2).textContent = u.nombre;
             row.insertCell(3).textContent = u.rol;
         });
-    } catch (err) {
-        console.error(err);
-    }
+    } catch (err) { console.error(err); }
 }
 
 async function cargarEdificiosAdmin() {
     try {
-        const res = await fetch('/api/edificios');
+        const res = await fetchWithAuth('/api/edificios');
         const edificios = await res.json();
         const tbody = document.querySelector('#edificiosTable tbody');
         tbody.innerHTML = '';
@@ -284,63 +480,51 @@ async function cargarEdificiosAdmin() {
             cellAcciones.appendChild(btnEditar);
             cellAcciones.appendChild(btnEliminar);
         });
-    } catch (err) {
-        console.error(err);
-    }
+    } catch (err) { console.error(err); }
 }
 
 async function agregarEdificio(e) {
     e.preventDefault();
     const nombre = document.getElementById('edificioNombre').value;
     try {
-        const res = await fetch('/api/edificios', {
+        const res = await fetchWithAuth('/api/edificios', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ nombre })
         });
         if (res.ok) {
             mostrarNotificacion('Edificio agregado', 'success');
             document.getElementById('edificioNombre').value = '';
             cargarEdificiosAdmin();
-        } else {
-            mostrarNotificacion('Error', 'error');
-        }
-    } catch (err) {
-        mostrarNotificacion('Error de red', 'error');
-    }
+        } else mostrarNotificacion('Error', 'error');
+    } catch (err) { mostrarNotificacion('Error de red', 'error'); }
 }
 
 function editarEdificio(id, nombreActual) {
-    const nuevoNombre = prompt('Nuevo nombre del edificio:', nombreActual);
+    const nuevoNombre = prompt('Nuevo nombre:', nombreActual);
     if (nuevoNombre && nuevoNombre !== nombreActual) {
-        fetch(`/api/edificios/${id}`, {
+        fetchWithAuth(`/api/edificios/${id}`, {
             method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ nombre: nuevoNombre })
         }).then(res => {
-            if (res.ok) {
-                mostrarNotificacion('Actualizado', 'success');
-                cargarEdificiosAdmin();
-            } else mostrarNotificacion('Error', 'error');
-        }).catch(err => mostrarNotificacion('Error de red', 'error'));
+            if (res.ok) { mostrarNotificacion('Actualizado', 'success'); cargarEdificiosAdmin(); }
+            else mostrarNotificacion('Error', 'error');
+        }).catch(() => mostrarNotificacion('Error de red', 'error'));
     }
 }
 
 async function eliminarEdificio(id) {
-    if (confirm('¿Eliminar edificio? Se perderán sus salones e incidencias asociadas.')) {
+    if (confirm('¿Eliminar edificio? Se perderán sus salones e incidencias.')) {
         try {
-            const res = await fetch(`/api/edificios/${id}`, { method: 'DELETE' });
-            if (res.ok) {
-                mostrarNotificacion('Eliminado', 'success');
-                cargarEdificiosAdmin();
-            } else mostrarNotificacion('Error', 'error');
+            const res = await fetchWithAuth(`/api/edificios/${id}`, { method: 'DELETE' });
+            if (res.ok) { mostrarNotificacion('Eliminado', 'success'); cargarEdificiosAdmin(); }
+            else mostrarNotificacion('Error', 'error');
         } catch (err) { mostrarNotificacion('Error de red', 'error'); }
     }
 }
 
 async function cargarEstadisticas() {
     try {
-        const res = await fetch('/api/estadisticas');
+        const res = await fetchWithAuth('/api/estadisticas');
         const stats = await res.json();
         const tbody = document.querySelector('#statsTable tbody');
         tbody.innerHTML = '';
@@ -350,62 +534,49 @@ async function cargarEstadisticas() {
             row.insertCell(1).textContent = stat.estado;
             row.insertCell(2).textContent = stat.total;
         });
-    } catch (err) {
-        console.error(err);
-    }
+    } catch (err) { console.error(err); }
 }
 
-// ========== GESTIÓN DE SALONES ==========
-async function cargarEdificiosParaSalones() {
-    const res = await fetch('/api/edificios');
-    const edificios = await res.json();
-    const select = document.getElementById('selectEdificioSalon');
-    select.innerHTML = '<option value="">-- Todos los edificios --</option>';
-    edificios.forEach(ed => {
-        const option = document.createElement('option');
-        option.value = ed.id;
-        option.textContent = ed.nombre;
-        select.appendChild(option);
-    });
+// ========== SALONES (con paginación) ==========
+async function cargarSalonesAdmin(pagina = 1) {
+    paginaActualSalones = pagina;
+    try {
+        let url = `/api/salones/todos?pagina=${pagina}&limite=10`;
+        if (edificioFiltroSalones) url += `&edificio_id=${edificioFiltroSalones}`;
+        const res = await fetchWithAuth(url);
+        const data = await res.json();
+        totalPaginasSalones = data.totalPaginas;
+        const tbody = document.querySelector('#salonesTable tbody');
+        tbody.innerHTML = '';
+        data.data.forEach(salon => {
+            const row = tbody.insertRow();
+            row.insertCell(0).textContent = salon.id;
+            row.insertCell(1).textContent = salon.nombre;
+            row.insertCell(2).textContent = salon.edificio_nombre;
+            const cellAcciones = row.insertCell(3);
+            const btnEditar = document.createElement('button');
+            btnEditar.textContent = 'Editar';
+            btnEditar.className = 'accion';
+            btnEditar.onclick = () => editarSalon(salon.id, salon.nombre);
+            const btnEliminar = document.createElement('button');
+            btnEliminar.textContent = 'Eliminar';
+            btnEliminar.className = 'accion eliminar';
+            btnEliminar.onclick = () => eliminarSalon(salon.id);
+            cellAcciones.appendChild(btnEditar);
+            cellAcciones.appendChild(btnEliminar);
+        });
+        document.getElementById('pagina-actual-salones').textContent = pagina;
+        document.getElementById('total-paginas-salones').textContent = totalPaginasSalones;
+        document.getElementById('btn-anterior-salones').disabled = (pagina === 1);
+        document.getElementById('btn-siguiente-salones').disabled = (pagina === totalPaginasSalones);
+    } catch (err) { console.error(err); }
 }
 
-async function cargarTodosSalones() {
-    const res = await fetch('/api/salones/todos');
-    const salones = await res.json();
-    mostrarSalonesEnTabla(salones);
-}
-
-async function cargarSalonesPorEdificio(edificioId) {
-    const res = await fetch(`/api/salones?edificio_id=${edificioId}`);
-    const salones = await res.json();
-    const edificioRes = await fetch('/api/edificios');
-    const edificios = await edificioRes.json();
-    const edificio = edificios.find(e => e.id == edificioId);
-    const salonesConEdificio = salones.map(s => ({ ...s, edificio_nombre: edificio ? edificio.nombre : '' }));
-    mostrarSalonesEnTabla(salonesConEdificio);
-    document.getElementById('salonEdificioId').value = edificioId;
-}
-
-function mostrarSalonesEnTabla(salones) {
-    const tbody = document.querySelector('#salonesTable tbody');
-    tbody.innerHTML = '';
-    salones.forEach(salon => {
-        const row = tbody.insertRow();
-        row.insertCell(0).textContent = salon.id;
-        row.insertCell(1).textContent = salon.nombre;
-        row.insertCell(2).textContent = salon.edificio_nombre || 'N/A';
-        const cellAcciones = row.insertCell(3);
-        const btnEditar = document.createElement('button');
-        btnEditar.textContent = 'Editar';
-        btnEditar.className = 'accion';
-        btnEditar.onclick = () => editarSalon(salon.id, salon.nombre);
-        const btnEliminar = document.createElement('button');
-        btnEliminar.textContent = 'Eliminar';
-        btnEliminar.className = 'accion eliminar';
-        btnEliminar.onclick = () => eliminarSalon(salon.id);
-        cellAcciones.appendChild(btnEditar);
-        cellAcciones.appendChild(btnEliminar);
-    });
+function cambiarPaginaSalones(delta) {
+    let nueva = paginaActualSalones + delta;
+    if (nueva < 1) nueva = 1;
+    if (nueva > totalPaginasSalones) nueva = totalPaginasSalones;
+    cargarSalonesAdmin(nueva);
 }
 
 async function agregarSalon(e) {
@@ -413,58 +584,44 @@ async function agregarSalon(e) {
     const nombre = document.getElementById('salonNombre').value;
     let edificio_id = document.getElementById('salonEdificioId').value;
     if (!edificio_id) {
-        edificio_id = prompt('ID del edificio al que pertenece el salón (1-12 para A1-A12):');
+        edificio_id = prompt('ID del edificio (1-12 para A1-A12):');
         if (!edificio_id) return;
     }
     try {
-        const res = await fetch('/api/salones', {
+        const res = await fetchWithAuth('/api/salones', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ nombre, edificio_id })
         });
         if (res.ok) {
             mostrarNotificacion('Salón agregado', 'success');
             document.getElementById('salonNombre').value = '';
-            const selectEdificio = document.getElementById('selectEdificioSalon').value;
-            if (selectEdificio) cargarSalonesPorEdificio(selectEdificio);
-            else cargarTodosSalones();
+            cargarSalonesAdmin(1);
         } else {
             const err = await res.json();
             mostrarNotificacion('Error: ' + err.error, 'error');
         }
-    } catch (err) {
-        mostrarNotificacion('Error de red', 'error');
-    }
+    } catch (err) { mostrarNotificacion('Error de red', 'error'); }
 }
 
 function editarSalon(id, nombreActual) {
     const nuevoNombre = prompt('Nuevo nombre del salón:', nombreActual);
     if (nuevoNombre && nuevoNombre !== nombreActual) {
-        fetch(`/api/salones/${id}`, {
+        fetchWithAuth(`/api/salones/${id}`, {
             method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ nombre: nuevoNombre })
         }).then(res => {
-            if (res.ok) {
-                mostrarNotificacion('Actualizado', 'success');
-                const selectEdificio = document.getElementById('selectEdificioSalon').value;
-                if (selectEdificio) cargarSalonesPorEdificio(selectEdificio);
-                else cargarTodosSalones();
-            } else mostrarNotificacion('Error', 'error');
-        }).catch(err => mostrarNotificacion('Error de red', 'error'));
+            if (res.ok) { mostrarNotificacion('Actualizado', 'success'); cargarSalonesAdmin(paginaActualSalones); }
+            else mostrarNotificacion('Error', 'error');
+        }).catch(() => mostrarNotificacion('Error de red', 'error'));
     }
 }
 
 async function eliminarSalon(id) {
-    if (confirm('¿Eliminar salón? Se perderán las incidencias asociadas (si las hay).')) {
+    if (confirm('¿Eliminar salón? Si tiene incidencias no se podrá.')) {
         try {
-            const res = await fetch(`/api/salones/${id}`, { method: 'DELETE' });
-            if (res.ok) {
-                mostrarNotificacion('Eliminado', 'success');
-                const selectEdificio = document.getElementById('selectEdificioSalon').value;
-                if (selectEdificio) cargarSalonesPorEdificio(selectEdificio);
-                else cargarTodosSalones();
-            } else {
+            const res = await fetchWithAuth(`/api/salones/${id}`, { method: 'DELETE' });
+            if (res.ok) { mostrarNotificacion('Eliminado', 'success'); cargarSalonesAdmin(paginaActualSalones); }
+            else {
                 const err = await res.json();
                 mostrarNotificacion('Error: ' + err.error, 'error');
             }
