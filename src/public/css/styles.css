@@ -1,238 +1,308 @@
+/* =======================================================
+   1. RESET Y VARIABLES GLOBALES (Diseño 2026)
+   ======================================================= */
 * {
     margin: 0;
     padding: 0;
     box-sizing: border-box;
 }
 
-body {
-    font-family: 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
-    background: linear-gradient(135deg, #e0eafc 0%, #cfdef3 100%);
-    color: #1e293b;
-    line-height: 1.5;
-    min-height: 100vh;
-    padding: 20px;
+:root {
+    --primary-color: #2563eb;
+    --primary-dark: #1e40af;
+    --primary-light: #dbeafe;
+    --secondary-color: #64748b;
+    --success-color: #10b981;
+    --warning-color: #f59e0b;
+    --danger-color: #ef4444;
+    --bg-color: #f8fafc;
+    --card-bg: #ffffff;
+    --text-primary: #0f172a;
+    --text-secondary: #475569;
+    --border-color: #e2e8f0;
+    --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+    --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+    --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1);
+    --radius: 0.75rem;
 }
 
+body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    background-color: var(--bg-color);
+    color: var(--text-primary);
+    height: 100vh;
+    overflow: hidden;
+    font-size: 0.875rem;
+}
+
+/* =======================================================
+   2. LAYOUT PRINCIPAL (100vh SIN SCROLL)
+   ======================================================= */
 .container, .login-container {
-    max-width: 1300px;
+    max-width: 1400px;
     margin: 0 auto;
-    background: rgba(255,255,255,0.95);
-    border-radius: 32px;
-    box-shadow: 0 20px 35px -10px rgba(0,0,0,0.2);
-    backdrop-filter: blur(2px);
-    padding: 30px;
-    transition: all 0.2s ease;
+    padding: 1rem;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
 }
 
 .login-container {
-    max-width: 500px;
-    margin-top: 10vh;
+    max-width: 450px;
+    justify-content: center;
+    height: 100vh;
 }
 
-h1, h2 {
+/* Header y contenido principal con Grid */
+.main-grid {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    overflow: hidden;
+    gap: 1rem;
+}
+
+/* Contenido con scroll interno (solo las tablas si es necesario) */
+.content-scroll {
+    flex: 1;
+    overflow-y: auto;
+    padding-right: 0.25rem;
+}
+
+.content-scroll::-webkit-scrollbar {
+    width: 6px;
+}
+.content-scroll::-webkit-scrollbar-track {
+    background: var(--border-color);
+    border-radius: 10px;
+}
+.content-scroll::-webkit-scrollbar-thumb {
+    background: var(--secondary-color);
+    border-radius: 10px;
+}
+
+/* =======================================================
+   3. ESTILOS DE COMPONENTES (Cards, Botones, Formularios)
+   ======================================================= */
+.card {
+    background: var(--card-bg);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow-sm);
+    border: 1px solid var(--border-color);
+    padding: 1.25rem;
+    margin-bottom: 1rem;
+    transition: box-shadow 0.2s ease;
+}
+.card:hover {
+    box-shadow: var(--shadow-md);
+}
+
+.card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+    padding-bottom: 0.75rem;
+    border-bottom: 1px solid var(--border-color);
+}
+.card-header h2, .card-header h3 {
+    margin: 0;
+    font-size: 1.125rem;
     font-weight: 600;
-    margin-bottom: 1.5rem;
-    border-left: 6px solid #3b82f6;
-    padding-left: 1rem;
-    color: #0f172a;
+    color: var(--text-primary);
 }
 
-h1 {
-    font-size: 2rem;
+/* Botones modernos */
+button, .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.5rem 1rem;
+    font-size: 0.875rem;
+    font-weight: 500;
+    border-radius: 0.5rem;
+    transition: all 0.2s ease;
+    cursor: pointer;
+    border: 1px solid transparent;
+    background-color: var(--primary-color);
+    color: white;
+}
+button:hover {
+    background-color: var(--primary-dark);
+    transform: translateY(-1px);
+}
+.btn-secondary {
+    background-color: var(--secondary-color);
+}
+.btn-danger {
+    background-color: var(--danger-color);
+}
+.btn-outline {
+    background-color: transparent;
+    border-color: var(--border-color);
+    color: var(--text-secondary);
+}
+.btn-outline:hover {
+    background-color: var(--bg-color);
+}
+
+/* Botones de acción dentro de tablas */
+button.accion {
+    padding: 0.25rem 0.75rem;
+    font-size: 0.75rem;
+    margin: 0 0.25rem;
+    background-color: var(--primary-light);
+    color: var(--primary-dark);
+}
+button.accion.eliminar {
+    background-color: #fee2e2;
+    color: var(--danger-color);
+}
+button.accion:hover {
+    filter: brightness(0.95);
+    transform: translateY(-1px);
+}
+
+/* Formularios compactos */
+input, select, textarea {
+    width: 100%;
+    padding: 0.5rem 0.75rem;
+    border: 1px solid var(--border-color);
+    border-radius: 0.5rem;
+    font-size: 0.875rem;
+    transition: all 0.2s;
+}
+input:focus, select:focus, textarea:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px var(--primary-light);
 }
 
 label {
     display: block;
-    margin: 0.75rem 0 0.25rem;
+    margin-bottom: 0.25rem;
     font-weight: 500;
-    color: #334155;
+    color: var(--text-secondary);
 }
 
-input, select, textarea, button {
-    width: 100%;
-    padding: 12px 14px;
-    border: 1px solid #cbd5e1;
-    border-radius: 16px;
-    font-size: 1rem;
-    transition: all 0.2s;
-    background-color: white;
-    font-family: inherit;
-}
-
-input:focus, select:focus, textarea:focus {
-    outline: none;
-    border-color: #3b82f6;
-    box-shadow: 0 0 0 3px rgba(59,130,246,0.2);
-}
-
-button {
-    background: linear-gradient(95deg, #3b82f6, #2563eb);
-    color: white;
-    font-weight: 600;
-    border: none;
-    cursor: pointer;
-    transition: transform 0.1s, box-shadow 0.2s;
-    margin-top: 8px;
-}
-
-button:hover {
-    background: linear-gradient(95deg, #2563eb, #1d4ed8);
-    transform: translateY(-1px);
-    box-shadow: 0 10px 15px -5px rgba(37,99,235,0.3);
-}
-
-button:active {
-    transform: translateY(1px);
-}
-
-.logout {
-    background: linear-gradient(95deg, #ef4444, #dc2626);
-    margin-top: 25px;
-}
-
-.logout:hover {
-    background: linear-gradient(95deg, #dc2626, #b91c1c);
-}
-
+/* =======================================================
+   4. TABLAS OPTIMIZADAS (Compactas y Escaneables)
+   ======================================================= */
 table {
     width: 100%;
     border-collapse: collapse;
-    margin: 20px 0;
-    background: white;
-    border-radius: 20px;
-    overflow: hidden;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+    font-size: 0.8125rem;
 }
-
 th {
-    background: #f1f5f9;
-    color: #1e293b;
-    padding: 14px 12px;
-    font-weight: 600;
     text-align: left;
-    border-bottom: 2px solid #e2e8f0;
+    padding: 0.75rem 0.5rem;
+    background-color: var(--bg-color);
+    font-weight: 600;
+    color: var(--text-secondary);
+    border-bottom: 1px solid var(--border-color);
 }
-
 td {
-    padding: 12px;
-    border-bottom: 1px solid #e2e8f0;
+    padding: 0.6rem 0.5rem;
+    border-bottom: 1px solid var(--border-color);
+    vertical-align: middle;
 }
-
 tr:hover td {
-    background-color: #f8fafc;
+    background-color: var(--bg-color);
 }
 
-button.accion {
-    background: #10b981;
-    padding: 6px 12px;
-    margin: 0 4px;
-    width: auto;
-    font-size: 0.85rem;
-    border-radius: 40px;
-}
-
-button.accion.eliminar {
-    background: #ef4444;
-}
-
-button.accion:hover {
-    transform: translateY(-1px);
-}
-
+/* =======================================================
+   5. PESTAÑAS (Tabs) MODERNAS
+   ======================================================= */
 .tabs {
     display: flex;
-    gap: 8px;
-    border-bottom: 2px solid #e2e8f0;
-    margin-bottom: 25px;
-    flex-wrap: wrap;
+    gap: 0.5rem;
+    border-bottom: 1px solid var(--border-color);
+    margin-bottom: 1.5rem;
 }
-
 .tab-btn {
-    background: transparent;
-    color: #475569;
-    width: auto;
-    padding: 10px 22px;
-    margin: 0;
-    border-radius: 40px 40px 0 0;
-    font-weight: 500;
-    box-shadow: none;
+    background: none;
+    color: var(--text-secondary);
+    padding: 0.5rem 1rem;
+    margin-bottom: -1px;
+    border-radius: 0;
+    border-bottom: 2px solid transparent;
 }
-
 .tab-btn.active {
-    background: #3b82f6;
-    color: white;
+    color: var(--primary-color);
+    border-bottom-color: var(--primary-color);
+    background: none;
 }
-
 .tab-btn:hover:not(.active) {
-    background: #e2e8f0;
-    color: #0f172a;
+    background: none;
+    color: var(--text-primary);
     transform: none;
-    box-shadow: none;
 }
 
-.tab-content {
-    display: none;
-    animation: fadeIn 0.2s ease;
+/* =======================================================
+   6. PAGINACIÓN Y NOTIFICACIONES
+   ======================================================= */
+.pagination {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    gap: 1rem;
+    margin-top: 1rem;
+    padding-top: 0.75rem;
+    border-top: 1px solid var(--border-color);
+}
+.pagination button {
+    padding: 0.25rem 0.75rem;
+    background-color: var(--bg-color);
+    color: var(--text-secondary);
+}
+.pagination button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
 }
 
-.tab-content.active {
-    display: block;
-}
-
-@keyframes fadeIn {
-    from { opacity: 0; transform: translateY(5px);}
-    to { opacity: 1; transform: translateY(0);}
-}
-
-.user-info {
-    background: #eef2ff;
-    padding: 12px 20px;
-    border-radius: 60px;
-    margin-bottom: 25px;
-    text-align: right;
-    font-weight: 500;
-    color: #1e40af;
-    border: 1px solid #c7d2fe;
-}
-
-/* Mensajes de notificación */
 .notification {
     position: fixed;
-    top: 20px;
-    right: 20px;
-    padding: 12px 24px;
-    border-radius: 40px;
+    top: 1rem;
+    right: 1rem;
+    padding: 0.75rem 1.5rem;
+    border-radius: 0.5rem;
     color: white;
     font-weight: 500;
     z-index: 1000;
     animation: slideIn 0.3s ease;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    box-shadow: var(--shadow-lg);
 }
-.notification.success { background: #10b981; }
-.notification.error { background: #ef4444; }
-.notification.info { background: #3b82f6; }
+.notification.success { background: var(--success-color); }
+.notification.error { background: var(--danger-color); }
 
+.user-info {
+    background: var(--primary-light);
+    padding: 0.5rem 1rem;
+    border-radius: 2rem;
+    text-align: right;
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--primary-dark);
+    margin-bottom: 1rem;
+}
+
+/* =======================================================
+   7. RESPONSIVE Y UTILITIES
+   ======================================================= */
 @keyframes slideIn {
     from { transform: translateX(100%); opacity: 0; }
     to { transform: translateX(0); opacity: 1; }
 }
 
-/* Responsive */
-@media (max-width: 768px) {
-    .container, .login-container { padding: 20px; }
-    table, thead, tbody, th, td, tr { display: block; }
-    th { display: none; }
-    td {
-        position: relative;
-        padding-left: 50%;
-        text-align: right;
-    }
-    td::before {
-        content: attr(data-label);
-        position: absolute;
-        left: 12px;
-        width: 45%;
-        font-weight: bold;
-        text-align: left;
-    }
+.filters-bar {
+    display: flex;
+    gap: 0.75rem;
+    align-items: flex-end;
+    margin-bottom: 1rem;
+    flex-wrap: wrap;
+}
+.filters-bar .filter-group {
+    flex: 1;
+    min-width: 150px;
 }
