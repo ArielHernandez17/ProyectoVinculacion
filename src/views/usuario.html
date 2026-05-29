@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Reportar Incidencia - Usuario</title>
+    <link rel="stylesheet" href="/css/styles.css">
+</head>
+<body>
+    <div class="container">
+        <h1>Reportar Problema de Limpieza</h1>
+        <div class="user-info" id="userInfo"></div>
+        <form id="reporteForm">
+            <label>Edificio:</label>
+            <select id="edificio" required>
+                <option value="">Seleccione edificio</option>
+            </select>
+            <label>Salón:</label>
+            <select id="salon" required disabled>
+                <option value="">Primero seleccione edificio</option>
+            </select>
+            <label>Descripción del problema:</label>
+            <textarea id="descripcion" rows="4" required placeholder="Ej: Basura acumulada, baño sucio, etc."></textarea>
+            <button type="submit">Enviar Reporte</button>
+        </form>
+        <div id="mensaje"></div>
+        <button id="logoutBtn" class="logout">Cerrar sesión</button>
+    </div>
+    <script src="/js/main.js"></script>
+</body>
+</html>

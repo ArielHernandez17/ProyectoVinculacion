@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Admin - Sistema Incidencias</title>
+    <link rel="stylesheet" href="/css/styles.css">
+</head>
+<body>
+    <div class="container">
+        <h1>Administración FES Aragón</h1>
+        <div class="user-info" id="userInfo"></div>
+        <div class="tabs">
+            <button class="tab-btn active" data-tab="usuarios">Usuarios</button>
+            <button class="tab-btn" data-tab="edificios">Edificios</button>
+            <button class="tab-btn" data-tab="estadisticas">Estadísticas</button>
+        </div>
+        <!-- Pestaña Usuarios -->
+        <div id="usuarios" class="tab-content active">
+            <h2>Lista de Usuarios</h2>
+            <table id="usuariosTable"><thead><tr><th>ID</th><th>Correo</th><th>Nombre</th><th>Rol</th></tr></thead><tbody></tbody></table>
+        </div>
+        <!-- Pestaña Edificios (CRUD) -->
+        <div id="edificios" class="tab-content">
+            <h2>Gestión de Edificios</h2>
+            <form id="edificioForm">
+                <input type="text" id="edificioNombre" placeholder="Nombre del edificio" required>
+                <button type="submit">Agregar Edificio</button>
+            </form>
+            <table id="edificiosTable"><thead><tr><th>ID</th><th>Nombre</th><th>Acciones</th></tr></thead><tbody></tbody></table>
+        </div>
+        <!-- Pestaña Estadísticas -->
+        <div id="estadisticas" class="tab-content">
+            <h2>Reportes por Edificio y Estado</h2>
+            <table id="statsTable"><thead><tr><th>Edificio</th><th>Estado</th><th>Cantidad</th></tr></thead><tbody></tbody></table>
+        </div>
+        <button id="logoutBtn" class="logout">Cerrar sesión</button>
+    </div>
+    <script src="/js/main.js"></script>
+</body>
+</html>

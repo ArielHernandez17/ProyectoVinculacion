@@ -1,0 +1,38 @@
+version: '3.8'
+
+services:
+  db:
+    image: mariadb:10.11
+    container_name: incidencias_db
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: root123
+      MYSQL_DATABASE: incidencias_db
+      MYSQL_USER: user_app
+      MYSQL_PASSWORD: user_pass
+    ports:
+      - "3307:3306"   # Host:3307 -> Contenedor:3306
+    volumes:
+      - db_data:/var/lib/mysql
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      - incidencias_net
+
+  app:
+    build: .
+    container_name: incidencias_app
+    restart: always
+    ports:
+      - "3000:3000"   # Si el 3000 está ocupado, cámbialo a "3002:3000"
+    depends_on:
+      - db
+    env_file:
+      - .env
+    networks:
+      - incidencias_net
+
+volumes:
+  db_data:
+
+networks:
+  incidencias_net:
