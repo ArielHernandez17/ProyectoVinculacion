@@ -1,5 +1,4 @@
 
-```markdown
 # Sistema de Reportes de Incidencias de Limpieza – FES Aragón
 
 ## Descripción
