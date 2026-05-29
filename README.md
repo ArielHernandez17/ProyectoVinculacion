@@ -148,10 +148,10 @@ Se ha elaborado un video donde se explica el funcionamiento del sistema, la arqu
 
 ## 11. Créditos
 
-- **Desarrollador:** Ariel Hernández  
+- **Desarrollador:** Ariel Hernández Velazquez 320259689 
 - **Institución:** Facultad de Estudios Superiores Aragón, UNAM  
-- **Asignatura:** Proyecto de Ingeniería en Computación  
-- **Año:** 2025
+- **Asignatura:** Proyecto de Vinculación Empresarial
+- **Año:** 2026
 
 ## 12. Licencia
 
