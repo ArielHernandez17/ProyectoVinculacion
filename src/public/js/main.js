@@ -4,7 +4,7 @@
 let usuarioActual = null;
 let token = null;
 
-// Configuración de paginación
+// Configuración de paginación para incidencias (revisor y admin)
 let paginaActualIncidencias = 1;
 let totalPaginasIncidencias = 1;
 let filtroEstadoActual = null;
@@ -13,8 +13,12 @@ let paginaActualSalones = 1;
 let totalPaginasSalones = 1;
 let edificioFiltroSalones = null;
 
+let paginaActualAdminIncidencias = 1;
+let totalPaginasAdminIncidencias = 1;
+let filtroEstadoAdmin = '';
+
 // =========================================================================
-// Notificaciones flotantes (igual que antes)
+// Notificaciones flotantes
 // =========================================================================
 function mostrarNotificacion(mensaje, tipo = 'success') {
     const notif = document.createElement('div');
@@ -65,7 +69,6 @@ document.addEventListener('DOMContentLoaded', () => {
             document.getElementById('reporteForm')?.addEventListener('submit', enviarReporte);
         } else if (path.includes('revisor.html')) {
             cargarIncidenciasRevisor();
-            // Botón para exportar (solo admin lo verá, pero se puede ocultar)
         } else if (path.includes('admin.html')) {
             inicializarAdmin();
         }
@@ -114,7 +117,7 @@ function cerrarSesion() {
 }
 
 // =========================================================================
-// VISTA USUARIO (sin cambios mayores, pero usa token)
+// VISTA USUARIO
 // =========================================================================
 async function cargarEdificios() {
     try {
@@ -179,7 +182,7 @@ async function enviarReporte(e) {
 }
 
 // =========================================================================
-// VISTA REVISOR (Paginación, historial, subir imagen, cambiar estado)
+// VISTA REVISOR (sin historial)
 // =========================================================================
 async function cargarIncidenciasRevisor(pagina = 1) {
     paginaActualIncidencias = pagina;
@@ -212,11 +215,6 @@ async function cargarIncidenciasRevisor(pagina = 1) {
                 btnResuelto.onclick = () => cambiarEstadoConComentario(inc.id, 'Resuelto');
                 cellAcciones.appendChild(btnResuelto);
             }
-            const btnHistorial = document.createElement('button');
-            btnHistorial.textContent = 'Historial';
-            btnHistorial.className = 'accion';
-            btnHistorial.onclick = () => verHistorial(inc.id);
-            cellAcciones.appendChild(btnHistorial);
             const btnImagen = document.createElement('button');
             btnImagen.textContent = 'Subir foto';
             btnImagen.className = 'accion';
@@ -267,22 +265,6 @@ async function cambiarEstadoConComentario(id, nuevoEstado) {
     } catch (err) { mostrarNotificacion('Error de red', 'error'); }
 }
 
-async function verHistorial(id) {
-    try {
-        const res = await fetchWithAuth(`/api/incidencias/${id}/historial`);
-        const historial = await res.json();
-        let html = '<h3>Historial de cambios</h3><ul>';
-        historial.forEach(h => {
-            html += `<li><strong>${h.fecha_cambio}</strong> - ${h.usuario_nombre} cambió de ${h.estado_anterior} a ${h.estado_nuevo}<br>Comentario: ${h.comentario || 'Ninguno'}</li>`;
-        });
-        html += '</ul>';
-        const modal = document.createElement('div');
-        modal.className = 'modal';
-        modal.innerHTML = `<div class="modal-content">${html}<button onclick="this.parentElement.parentElement.remove()">Cerrar</button></div>`;
-        document.body.appendChild(modal);
-    } catch (err) { mostrarNotificacion('Error al obtener historial', 'error'); }
-}
-
 async function subirImagen(id) {
     const input = document.createElement('input');
     input.type = 'file';
@@ -310,9 +292,10 @@ async function subirImagen(id) {
 }
 
 // =========================================================================
-// VISTA ADMIN (Pestañas, paginación salones, exportar CSV)
+// VISTA ADMIN (incluye nueva pestaña Incidencias)
 // =========================================================================
 function inicializarAdmin() {
+    // Pestañas
     const tabs = document.querySelectorAll('.tab-btn');
     tabs.forEach(btn => {
         btn.addEventListener('click', () => {
@@ -321,19 +304,32 @@ function inicializarAdmin() {
             document.getElementById(tabId).classList.add('active');
             tabs.forEach(b => b.classList.remove('active'));
             btn.classList.add('active');
+            if (tabId === 'incidencias') cargarIncidenciasAdmin();
             if (tabId === 'usuarios') cargarUsuarios();
             if (tabId === 'edificios') cargarEdificiosAdmin();
             if (tabId === 'salones') cargarSalonesAdmin(1);
             if (tabId === 'estadisticas') cargarEstadisticas();
         });
     });
+
+    // Cargar pestaña incidencias por defecto
+    cargarIncidenciasAdmin();
     cargarUsuarios();
     cargarEdificiosAdmin();
     cargarSalonesAdmin(1);
     cargarEstadisticas();
+
+    // Eventos
     document.getElementById('edificioForm').addEventListener('submit', agregarEdificio);
     document.getElementById('salonForm').addEventListener('submit', agregarSalon);
-    document.getElementById('exportarCSV').addEventListener('click', exportarCSV);
+    document.getElementById('exportarCSV')?.addEventListener('click', () => exportarCSV('estadisticas'));
+    document.getElementById('exportarCSVIncidencias')?.addEventListener('click', () => exportarCSV('incidencias'));
+    document.getElementById('btn-anterior-admin')?.addEventListener('click', () => cambiarPaginaAdminIncidencias(-1));
+    document.getElementById('btn-siguiente-admin')?.addEventListener('click', () => cambiarPaginaAdminIncidencias(1));
+    document.getElementById('filtroEstadoAdmin')?.addEventListener('change', (e) => {
+        filtroEstadoAdmin = e.target.value;
+        cargarIncidenciasAdmin(1);
+    });
     document.getElementById('btn-anterior-salones')?.addEventListener('click', () => cambiarPaginaSalones(-1));
     document.getElementById('btn-siguiente-salones')?.addEventListener('click', () => cambiarPaginaSalones(1));
     document.getElementById('selectEdificioSalon')?.addEventListener('change', (e) => {
@@ -342,6 +338,110 @@ function inicializarAdmin() {
     });
 }
 
+// ========== INCIDENCIAS PARA ADMIN (con historial) ==========
+async function cargarIncidenciasAdmin(pagina = 1) {
+    paginaActualAdminIncidencias = pagina;
+    try {
+        const estadoParam = filtroEstadoAdmin ? `&estado=${filtroEstadoAdmin}` : '';
+        const res = await fetchWithAuth(`/api/incidencias?pagina=${pagina}&limite=10${estadoParam}`);
+        const data = await res.json();
+        totalPaginasAdminIncidencias = data.totalPaginas;
+        const tbody = document.querySelector('#incidenciasAdminTable tbody');
+        tbody.innerHTML = '';
+        data.data.forEach(inc => {
+            const row = tbody.insertRow();
+            row.insertCell(0).textContent = inc.id;
+            row.insertCell(1).textContent = inc.edificio_nombre;
+            row.insertCell(2).textContent = inc.salon_nombre;
+            row.insertCell(3).textContent = inc.descripcion;
+            row.insertCell(4).textContent = inc.estado;
+            row.insertCell(5).textContent = inc.comentario || '---';
+            const cellAcciones = row.insertCell(6);
+            const btnHistorial = document.createElement('button');
+            btnHistorial.textContent = 'Ver historial';
+            btnHistorial.className = 'accion';
+            btnHistorial.onclick = () => verHistorial(inc.id);
+            cellAcciones.appendChild(btnHistorial);
+            if (inc.imagen_path) {
+                const verImg = document.createElement('button');
+                verImg.textContent = 'Ver foto';
+                verImg.className = 'accion';
+                verImg.onclick = () => window.open(inc.imagen_path, '_blank');
+                cellAcciones.appendChild(verImg);
+            }
+        });
+        document.getElementById('pagina-actual-admin').textContent = pagina;
+        document.getElementById('total-paginas-admin').textContent = totalPaginasAdminIncidencias;
+        document.getElementById('btn-anterior-admin').disabled = (pagina === 1);
+        document.getElementById('btn-siguiente-admin').disabled = (pagina === totalPaginasAdminIncidencias);
+    } catch (err) { console.error(err); }
+}
+
+function cambiarPaginaAdminIncidencias(delta) {
+    let nueva = paginaActualAdminIncidencias + delta;
+    if (nueva < 1) nueva = 1;
+    if (nueva > totalPaginasAdminIncidencias) nueva = totalPaginasAdminIncidencias;
+    cargarIncidenciasAdmin(nueva);
+}
+
+// ========== HISTORIAL (modal) ==========
+async function verHistorial(id) {
+    try {
+        const res = await fetchWithAuth(`/api/incidencias/${id}/historial`);
+        const historial = await res.json();
+        if (!historial.length) {
+            mostrarNotificacion('No hay historial de cambios para esta incidencia', 'info');
+            return;
+        }
+        let html = '<div style="max-height: 400px; overflow-y: auto;"><h3>Historial de cambios</h3><ul>';
+        historial.forEach(h => {
+            html += `<li><strong>${new Date(h.fecha_cambio).toLocaleString()}</strong> - ${h.usuario_nombre} cambió de ${h.estado_anterior} a ${h.estado_nuevo}<br>Comentario: ${h.comentario || 'Ninguno'}</li>`;
+        });
+        html += '</ul></div><button onclick="this.parentElement.remove()">Cerrar</button>';
+        const modal = document.createElement('div');
+        modal.className = 'modal';
+        modal.style.position = 'fixed';
+        modal.style.top = '0';
+        modal.style.left = '0';
+        modal.style.width = '100%';
+        modal.style.height = '100%';
+        modal.style.backgroundColor = 'rgba(0,0,0,0.5)';
+        modal.style.display = 'flex';
+        modal.style.alignItems = 'center';
+        modal.style.justifyContent = 'center';
+        modal.style.zIndex = '2000';
+        const content = document.createElement('div');
+        content.style.backgroundColor = 'white';
+        content.style.padding = '20px';
+        content.style.borderRadius = '12px';
+        content.style.maxWidth = '500px';
+        content.style.width = '90%';
+        content.innerHTML = html;
+        modal.appendChild(content);
+        document.body.appendChild(modal);
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) modal.remove();
+        });
+    } catch (err) { mostrarNotificacion('Error al obtener historial', 'error'); }
+}
+
+// ========== EXPORTAR CSV (para admin) ==========
+async function exportarCSV(tipo) {
+    try {
+        let url = '/api/exportar/csv';
+        if (tipo === 'incidencias' && filtroEstadoAdmin) url += `?estado=${filtroEstadoAdmin}`;
+        const res = await fetchWithAuth(url);
+        const blob = await res.blob();
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = `incidencias_${Date.now()}.csv`;
+        link.click();
+        URL.revokeObjectURL(link.href);
+        mostrarNotificacion('Exportación completada', 'success');
+    } catch (err) { mostrarNotificacion('Error al exportar', 'error'); }
+}
+
+// ========== CRUD USUARIOS, EDIFICIOS, SALONES, ESTADÍSTICAS ==========
 async function cargarUsuarios() {
     try {
         const res = await fetchWithAuth('/api/usuarios');
@@ -437,7 +537,7 @@ async function cargarEstadisticas() {
     } catch (err) { console.error(err); }
 }
 
-// ========== SALONES con paginación ==========
+// ========== SALONES (con paginación) ==========
 async function cargarSalonesAdmin(pagina = 1) {
     paginaActualSalones = pagina;
     try {
@@ -527,20 +627,4 @@ async function eliminarSalon(id) {
             }
         } catch (err) { mostrarNotificacion('Error de red', 'error'); }
     }
-}
-
-async function exportarCSV() {
-    try {
-        const res = await fetchWithAuth('/api/exportar/csv');
-        const blob = await res.blob();
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = 'incidencias.csv';
-        document.body.appendChild(a);
-        a.click();
-        a.remove();
-        window.URL.revokeObjectURL(url);
-        mostrarNotificacion('Exportación completada', 'success');
-    } catch (err) { mostrarNotificacion('Error al exportar', 'error'); }
 }

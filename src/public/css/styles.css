@@ -240,6 +240,16 @@ tr:hover td {
 }
 
 /* =======================================================
+   8. CONTENIDO DE PESTAÑAS (ocultar/mostrar)
+   ======================================================= */
+.tab-content {
+    display: none;
+}
+.tab-content.active {
+    display: block;
+}
+
+/* =======================================================
    6. PAGINACIÓN Y NOTIFICACIONES
    ======================================================= */
 .pagination {
@@ -306,3 +316,4 @@ tr:hover td {
     flex: 1;
     min-width: 150px;
 }
+
