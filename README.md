@@ -66,8 +66,7 @@ Permite a estudiantes reportar incidencias, al personal de limpieza cambiar esta
 - **Reporte técnico en PDF** – Documento completo con análisis, diseño, requerimientos, arquitectura y modelo de datos.  
 
 - **Video demostrativo (YouTube)** – Explicación del sistema, arquitectura, pruebas de todos los roles.  
-  *(URL incluida tras la subida del video)*
-
+  *(https://youtu.be/D6_L2BzXk4M)*
 - **Código fuente del reporte (LaTeX)** – Archivo `.tex` y recursos gráficos empaquetados en un ZIP.  
   *(Disponible en el repositorio junto al resto de entregables)*
 
