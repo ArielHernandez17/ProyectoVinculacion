@@ -168,6 +168,69 @@ async function getUsuarios() {
     }
 }
 
+// ========== CRUD SALONES (para admin) ==========
+async function getAllSalones() {
+    let conn;
+    try {
+        conn = await pool.getConnection();
+        const rows = await conn.query(`
+            SELECT s.id, s.nombre, s.edificio_id, e.nombre as edificio_nombre 
+            FROM salones s 
+            JOIN edificios e ON s.edificio_id = e.id 
+            ORDER BY e.nombre, s.nombre
+        `);
+        return rows;
+    } catch (err) {
+        throw err;
+    } finally {
+        if (conn) conn.release();
+    }
+}
+
+async function createSalon(nombre, edificioId) {
+    let conn;
+    try {
+        conn = await pool.getConnection();
+        const result = await conn.query('INSERT INTO salones (nombre, edificio_id) VALUES (?, ?)', [nombre, edificioId]);
+        return result.insertId;
+    } catch (err) {
+        throw err;
+    } finally {
+        if (conn) conn.release();
+    }
+}
+
+async function updateSalon(id, nombre) {
+    let conn;
+    try {
+        conn = await pool.getConnection();
+        const result = await conn.query('UPDATE salones SET nombre = ? WHERE id = ?', [nombre, id]);
+        return result.affectedRows > 0;
+    } catch (err) {
+        throw err;
+    } finally {
+        if (conn) conn.release();
+    }
+}
+
+async function deleteSalon(id) {
+    let conn;
+    try {
+        conn = await pool.getConnection();
+        // Verificar si tiene incidencias asociadas
+        const incidencias = await conn.query('SELECT id FROM incidencias WHERE salon_id = ? LIMIT 1', [id]);
+        if (incidencias.length > 0) {
+            throw new Error('No se puede eliminar el salón porque tiene incidencias asociadas.');
+        }
+        const result = await conn.query('DELETE FROM salones WHERE id = ?', [id]);
+        return result.affectedRows > 0;
+    } catch (err) {
+        throw err;
+    } finally {
+        if (conn) conn.release();
+    }
+}
+
 module.exports = {
     getSalonesByEdificio,
     createIncidencia,
@@ -178,5 +241,10 @@ module.exports = {
     createEdificio,
     updateEdificio,
     deleteEdificio,
-    getUsuarios
+    getUsuarios,
+    // Nuevas:
+    getAllSalones,
+    createSalon,
+    updateSalon,
+    deleteSalon
 };

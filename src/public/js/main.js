@@ -194,7 +194,7 @@ async function cambiarEstado(id, nuevoEstado) {
     }
 }
 
-// ========== ADMIN: pestañas, CRUD edificios, usuarios, estadísticas ==========
+// ========== ADMIN: pestañas, CRUD edificios, usuarios, estadísticas y salones ==========
 function inicializarAdmin() {
     // Pestañas
     const tabs = document.querySelectorAll('.tab-btn');
@@ -207,6 +207,10 @@ function inicializarAdmin() {
             btn.classList.add('active');
             if (tabId === 'usuarios') cargarUsuarios();
             if (tabId === 'edificios') cargarEdificiosAdmin();
+            if (tabId === 'salones') {
+                cargarEdificiosParaSalones();  // llena el select de filtro
+                cargarTodosSalones();           // carga todos los salones
+            }
             if (tabId === 'estadisticas') cargarEstadisticas();
         });
     });
@@ -216,6 +220,13 @@ function inicializarAdmin() {
     cargarEstadisticas();
     // Formulario agregar edificio
     document.getElementById('edificioForm').addEventListener('submit', agregarEdificio);
+    // Formulario agregar salón
+    document.getElementById('salonForm').addEventListener('submit', agregarSalon);
+    document.getElementById('btnCargarSalones').addEventListener('click', () => {
+        const edificioId = document.getElementById('selectEdificioSalon').value;
+        if (edificioId) cargarSalonesPorEdificio(edificioId);
+        else cargarTodosSalones();
+    });
 }
 
 async function cargarUsuarios() {
@@ -326,5 +337,123 @@ async function cargarEstadisticas() {
         });
     } catch (err) {
         console.error(err);
+    }
+}
+
+// ========== FUNCIONES PARA GESTIÓN DE SALONES (ADMIN) ==========
+async function cargarEdificiosParaSalones() {
+    const res = await fetch('/api/edificios');
+    const edificios = await res.json();
+    const select = document.getElementById('selectEdificioSalon');
+    select.innerHTML = '<option value="">-- Todos los edificios --</option>';
+    edificios.forEach(ed => {
+        const option = document.createElement('option');
+        option.value = ed.id;
+        option.textContent = ed.nombre;
+        select.appendChild(option);
+    });
+}
+
+async function cargarTodosSalones() {
+    const res = await fetch('/api/salones/todos');
+    const salones = await res.json();
+    mostrarSalonesEnTabla(salones);
+}
+
+async function cargarSalonesPorEdificio(edificioId) {
+    const res = await fetch(`/api/salones?edificio_id=${edificioId}`);
+    const salones = await res.json();
+    // Obtener nombre del edificio para mostrarlo en la tabla
+    const edificioRes = await fetch('/api/edificios');
+    const edificios = await edificioRes.json();
+    const edificio = edificios.find(e => e.id == edificioId);
+    const salonesConEdificio = salones.map(s => ({ ...s, edificio_nombre: edificio ? edificio.nombre : '' }));
+    mostrarSalonesEnTabla(salonesConEdificio);
+    document.getElementById('salonEdificioId').value = edificioId;
+}
+
+function mostrarSalonesEnTabla(salones) {
+    const tbody = document.querySelector('#salonesTable tbody');
+    tbody.innerHTML = '';
+    salones.forEach(salon => {
+        const row = tbody.insertRow();
+        row.insertCell(0).textContent = salon.id;
+        row.insertCell(1).textContent = salon.nombre;
+        row.insertCell(2).textContent = salon.edificio_nombre || 'N/A';
+        const cellAcciones = row.insertCell(3);
+        const btnEditar = document.createElement('button');
+        btnEditar.textContent = 'Editar';
+        btnEditar.className = 'accion';
+        btnEditar.onclick = () => editarSalon(salon.id, salon.nombre);
+        const btnEliminar = document.createElement('button');
+        btnEliminar.textContent = 'Eliminar';
+        btnEliminar.className = 'accion eliminar';
+        btnEliminar.onclick = () => eliminarSalon(salon.id);
+        cellAcciones.appendChild(btnEditar);
+        cellAcciones.appendChild(btnEliminar);
+    });
+}
+
+async function agregarSalon(e) {
+    e.preventDefault();
+    const nombre = document.getElementById('salonNombre').value;
+    let edificio_id = document.getElementById('salonEdificioId').value;
+    if (!edificio_id) {
+        edificio_id = prompt('ID del edificio al que pertenece el salón (1-12 para A1-A12):');
+        if (!edificio_id) return;
+    }
+    try {
+        const res = await fetch('/api/salones', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ nombre, edificio_id })
+        });
+        if (res.ok) {
+            alert('Salón agregado');
+            document.getElementById('salonNombre').value = '';
+            const selectEdificio = document.getElementById('selectEdificioSalon').value;
+            if (selectEdificio) cargarSalonesPorEdificio(selectEdificio);
+            else cargarTodosSalones();
+        } else {
+            const err = await res.json();
+            alert('Error: ' + err.error);
+        }
+    } catch (err) {
+        alert('Error de red');
+    }
+}
+
+function editarSalon(id, nombreActual) {
+    const nuevoNombre = prompt('Nuevo nombre del salón:', nombreActual);
+    if (nuevoNombre && nuevoNombre !== nombreActual) {
+        fetch(`/api/salones/${id}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ nombre: nuevoNombre })
+        }).then(res => {
+            if (res.ok) {
+                alert('Actualizado');
+                const selectEdificio = document.getElementById('selectEdificioSalon').value;
+                if (selectEdificio) cargarSalonesPorEdificio(selectEdificio);
+                else cargarTodosSalones();
+            } else alert('Error');
+        }).catch(err => alert(err));
+    }
+}
+
+async function eliminarSalon(id) {
+    if (confirm('¿Eliminar salón? Se perderán las incidencias asociadas (si las hay).')) {
+        try {
+            const res = await fetch(`/api/salones/${id}`, { method: 'DELETE' });
+            if (res.ok) {
+                alert('Eliminado');
+                const selectEdificio = document.getElementById('selectEdificioSalon').value;
+                if (selectEdificio) cargarSalonesPorEdificio(selectEdificio);
+                else cargarTodosSalones();
+            } else {
+                const err = await res.json();
+                alert('Error: ' + err.error);
+            }
+        } catch (err) { alert(err); }
     }
 }

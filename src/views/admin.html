@@ -12,6 +12,7 @@
         <div class="tabs">
             <button class="tab-btn active" data-tab="usuarios">Usuarios</button>
             <button class="tab-btn" data-tab="edificios">Edificios</button>
+            <button class="tab-btn" data-tab="salones">Salones</button>
             <button class="tab-btn" data-tab="estadisticas">Estadísticas</button>
         </div>
         <!-- Pestaña Usuarios -->
@@ -28,6 +29,26 @@
             </form>
             <table id="edificiosTable"><thead><tr><th>ID</th><th>Nombre</th><th>Acciones</th></tr></thead><tbody></tbody></table>
         </div>
+        <!-- Pestaña Salones -->
+<div id="salones" class="tab-content">
+    <h2>Gestión de Salones</h2>
+    <div>
+        <label>Filtrar por edificio:</label>
+        <select id="selectEdificioSalon">
+            <option value="">-- Todos los edificios --</option>
+        </select>
+        <button id="btnCargarSalones">Cargar Salones</button>
+    </div>
+    <form id="salonForm" style="margin-top: 20px;">
+        <input type="text" id="salonNombre" placeholder="Nombre del salón (ej. A110)" required>
+        <input type="hidden" id="salonEdificioId" value="">
+        <button type="submit">Agregar Salón</button>
+    </form>
+    <table id="salonesTable">
+        <thead><tr><th>ID</th><th>Nombre</th><th>Edificio</th><th>Acciones</th></tr></thead>
+        <tbody></tbody>
+    </table>
+</div>
         <!-- Pestaña Estadísticas -->
         <div id="estadisticas" class="tab-content">
             <h2>Reportes por Edificio y Estado</h2>

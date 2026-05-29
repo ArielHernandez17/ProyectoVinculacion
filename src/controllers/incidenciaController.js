@@ -127,6 +127,50 @@ async function listUsuarios(req, res) {
     }
 }
 
+// ========== CRUD SALONES ==========
+async function listSalones(req, res) {
+    try {
+        const salones = await incidenciaModel.getAllSalones();
+        res.json(salones);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+}
+
+async function addSalon(req, res) {
+    try {
+        const { nombre, edificio_id } = req.body;
+        if (!nombre || !edificio_id) return res.status(400).json({ error: 'Faltan datos' });
+        const id = await incidenciaModel.createSalon(nombre, edificio_id);
+        res.status(201).json({ id, nombre, edificio_id });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+}
+
+async function editSalon(req, res) {
+    try {
+        const { id } = req.params;
+        const { nombre } = req.body;
+        const success = await incidenciaModel.updateSalon(id, nombre);
+        if (success) res.json({ mensaje: 'Salón actualizado' });
+        else res.status(404).json({ error: 'No encontrado' });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+}
+
+async function removeSalon(req, res) {
+    try {
+        const { id } = req.params;
+        const success = await incidenciaModel.deleteSalon(id);
+        if (success) res.json({ mensaje: 'Salón eliminado' });
+        else res.status(404).json({ error: 'No encontrado' });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+}
+
 module.exports = {
     getSalones,
     createIncidencia,
@@ -137,5 +181,10 @@ module.exports = {
     addEdificio,
     editEdificio,
     removeEdificio,
-    listUsuarios
+    listUsuarios,
+    // Nuevas:
+    listSalones,
+    addSalon,
+    editSalon,
+    removeSalon
 };
