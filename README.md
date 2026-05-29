@@ -1,8 +1,3 @@
-Aquí tienes el archivo `README.md` completo, profesional, sin emojis, con secciones claras y placeholders para tu reporte y video de YouTube. Puedes copiarlo directamente y luego editar los enlaces y agregar tus imágenes.
-
----
-
-```markdown
 # Sistema de Reportes de Incidencias de Limpieza - FES Aragón
 
 ## 1. Descripción del Proyecto
@@ -25,7 +20,7 @@ El sistema cuenta con tres roles de usuario:
 ## 3. Estructura del Proyecto
 
 ```
-.
+
 ├── docker-compose.yml
 ├── Dockerfile
 ├── init.sql
