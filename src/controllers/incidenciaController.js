@@ -42,15 +42,15 @@ async function getIncidencias(req, res) {
     }
 }
 
-// Cambiar estado de incidencia
+// Cambiar estado y comentario de incidencia
 async function updateEstado(req, res) {
     try {
         const id = req.params.id;
-        const { estado } = req.body;
+        const { estado, comentario } = req.body;
         if (!['Pendiente', 'En Proceso', 'Resuelto'].includes(estado)) {
             return res.status(400).json({ error: 'Estado no válido' });
         }
-        const success = await incidenciaModel.updateEstadoIncidencia(id, estado);
+        const success = await incidenciaModel.updateEstadoIncidencia(id, estado, comentario || null);
         if (success) {
             res.json({ mensaje: 'Estado actualizado' });
         } else {
@@ -58,11 +58,11 @@ async function updateEstado(req, res) {
         }
     } catch (err) {
         console.error(err);
-        res.status(500).json({ error: 'Error al actualizar estado' });
+        res.status(500).json({ error: err.message });
     }
 }
 
-// Obtener estadísticas (GROUP BY edificio, estado)
+// Estadísticas
 async function getEstadisticas(req, res) {
     try {
         const stats = await incidenciaModel.getEstadisticas();
@@ -117,7 +117,7 @@ async function removeEdificio(req, res) {
     }
 }
 
-// Listar usuarios
+// Usuarios
 async function listUsuarios(req, res) {
     try {
         const usuarios = await incidenciaModel.getUsuarios();
@@ -127,7 +127,7 @@ async function listUsuarios(req, res) {
     }
 }
 
-// ========== CRUD SALONES ==========
+// CRUD Salones
 async function listSalones(req, res) {
     try {
         const salones = await incidenciaModel.getAllSalones();
@@ -182,7 +182,6 @@ module.exports = {
     editEdificio,
     removeEdificio,
     listUsuarios,
-    // Nuevas:
     listSalones,
     addSalon,
     editSalon,

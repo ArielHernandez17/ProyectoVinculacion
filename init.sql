@@ -34,6 +34,7 @@ CREATE TABLE IF NOT EXISTS incidencias (
     usuario_id INT NOT NULL,
     salon_id INT NOT NULL,
     estado ENUM('Pendiente', 'En Proceso', 'Resuelto') DEFAULT 'Pendiente',
+    comentario TEXT NULL,
     fecha_creacion TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     fecha_actualizacion TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     FOREIGN KEY (usuario_id) REFERENCES usuarios(id) ON DELETE CASCADE,
@@ -112,10 +113,10 @@ INSERT INTO usuarios (correo, nombre, rol_id) VALUES
 ('revisor@fes.aragon.unam.mx', 'Juan Pérez', 2),
 ('usuario@ejemplo.com', 'María López', 3);
 
-INSERT INTO incidencias (descripcion, usuario_id, salon_id, estado) VALUES
-('Basura en el piso', 3, 1, 'Pendiente'),
-('Baño sucio', 3, 6, 'En Proceso'),
-('Pintarrón sin borrar', 3, 11, 'Resuelto');
+INSERT INTO incidencias (descripcion, usuario_id, salon_id, estado, comentario) VALUES
+('Basura en el piso', 3, 1, 'Pendiente', NULL),
+('Baño sucio', 3, 6, 'En Proceso', 'Se asignó al equipo de limpieza'),
+('Pintarrón sin borrar', 3, 11, 'Resuelto', 'Se borró correctamente');
 
 -- Índices para mejorar rendimiento
 CREATE INDEX idx_incidencias_estado ON incidencias(estado);

@@ -10,7 +10,8 @@ async function login(req, res) {
     try {
         conn = await pool.getConnection();
         // Buscar si el usuario ya existe por correo
-        let [user] = await conn.query('SELECT id, nombre, rol_id FROM usuarios WHERE correo = ?', [correo]);
+        let users = await conn.query('SELECT id, nombre, rol_id FROM usuarios WHERE correo = ?', [correo]);
+        let user = users[0];
         let rolId;
         if (rol === 'Admin') rolId = 1;
         else if (rol === 'Revisor') rolId = 2;
@@ -32,12 +33,12 @@ async function login(req, res) {
         }
 
         // Obtener nombre del rol
-        const [rolObj] = await conn.query('SELECT nombre FROM roles WHERE id = ?', [user.rol_id]);
+        const rolObj = await conn.query('SELECT nombre FROM roles WHERE id = ?', [user.rol_id]);
         res.json({
             id: user.id,
             nombre: user.nombre,
             correo,
-            rol: rolObj.nombre
+            rol: rolObj[0].nombre
         });
     } catch (err) {
         console.error(err);

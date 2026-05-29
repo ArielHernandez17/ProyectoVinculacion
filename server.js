@@ -12,21 +12,20 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(express.static(path.join(__dirname, 'src/public')));
 
-// Rutas
+// Importar rutas
 const incidenciaRoutes = require('./src/routes/incidenciaRoutes');
-const authRoutes = require('./src/routes/authRoutes');
+const authRoutes = require('./src/routes/authRoutes');   // ← Importante
 
+// Usar rutas
 app.use('/api', incidenciaRoutes);
-app.use('/api', authRoutes);
+app.use('/api', authRoutes);   // ← Aquí se monta /api/login
 
-// Servir las vistas HTML
+// Servir vistas
 app.get('/', (req, res) => res.redirect('/views/login.html'));
 app.get('/views/:page', (req, res) => {
-    const page = req.params.page;
-    res.sendFile(path.join(__dirname, 'src/views', page));
+    res.sendFile(path.join(__dirname, 'src/views', req.params.page));
 });
 
-// Iniciar servidor
 app.listen(PORT, () => {
     console.log(`Servidor corriendo en http://localhost:${PORT}`);
 });

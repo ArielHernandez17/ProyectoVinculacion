@@ -1,13 +1,24 @@
 // Variables globales
 let usuarioActual = null;
 
+// Notificaciones flotantes
+function mostrarNotificacion(mensaje, tipo = 'success') {
+    const notif = document.createElement('div');
+    notif.className = `notification ${tipo}`;
+    notif.textContent = mensaje;
+    document.body.appendChild(notif);
+    setTimeout(() => {
+        notif.style.opacity = '0';
+        setTimeout(() => notif.remove(), 300);
+    }, 3000);
+}
+
 // Al cargar la página, según la vista, ejecutar funciones
 document.addEventListener('DOMContentLoaded', () => {
     const path = window.location.pathname;
     if (path.includes('login.html')) {
         document.getElementById('loginForm')?.addEventListener('submit', handleLogin);
     } else {
-        // Verificar sesión
         const userStr = sessionStorage.getItem('usuario');
         if (!userStr) {
             window.location.href = '/views/login.html';
@@ -42,12 +53,11 @@ async function handleLogin(e) {
         if (!res.ok) throw new Error('Error en login');
         const data = await res.json();
         sessionStorage.setItem('usuario', JSON.stringify(data));
-        // Redirigir según rol
         if (data.rol === 'Admin') window.location.href = '/views/admin.html';
         else if (data.rol === 'Revisor') window.location.href = '/views/revisor.html';
         else window.location.href = '/views/usuario.html';
     } catch (err) {
-        alert('Error al iniciar sesión: ' + err.message);
+        mostrarNotificacion('Error al iniciar sesión: ' + err.message, 'error');
     }
 }
 
@@ -63,7 +73,7 @@ function cerrarSesion() {
     window.location.href = '/views/login.html';
 }
 
-// ========== USUARIO: cargar edificios y salones dinámicos ==========
+// ========== USUARIO ==========
 async function cargarEdificios() {
     try {
         const res = await fetch('/api/edificios');
@@ -111,7 +121,7 @@ async function enviarReporte(e) {
     const descripcion = document.getElementById('descripcion').value;
     const salon_id = document.getElementById('salon').value;
     if (!salon_id) {
-        alert('Seleccione un salón');
+        mostrarNotificacion('Seleccione un salón', 'error');
         return;
     }
     const data = {
@@ -126,18 +136,18 @@ async function enviarReporte(e) {
             body: JSON.stringify(data)
         });
         if (res.ok) {
-            alert('Reporte enviado con éxito');
+            mostrarNotificacion('Reporte enviado con éxito', 'success');
             document.getElementById('reporteForm').reset();
             document.getElementById('salon').disabled = true;
         } else {
-            alert('Error al enviar');
+            mostrarNotificacion('Error al enviar', 'error');
         }
     } catch (err) {
-        alert('Error de conexión');
+        mostrarNotificacion('Error de conexión', 'error');
     }
 }
 
-// ========== REVISOR: incidencias y cambio de estado ==========
+// ========== REVISOR ==========
 async function cargarIncidenciasRevisor() {
     try {
         const res = await fetch('/api/incidencias?estado=Pendiente');
@@ -154,18 +164,19 @@ async function cargarIncidenciasRevisor() {
             row.insertCell(2).textContent = inc.salon_nombre;
             row.insertCell(3).textContent = inc.descripcion;
             row.insertCell(4).textContent = inc.estado;
-            const cellAcciones = row.insertCell(5);
+            row.insertCell(5).textContent = inc.comentario || '---';
+            const cellAcciones = row.insertCell(6);
             if (inc.estado === 'Pendiente') {
                 const btnProceso = document.createElement('button');
                 btnProceso.textContent = 'En Proceso';
                 btnProceso.className = 'accion';
-                btnProceso.onclick = () => cambiarEstado(inc.id, 'En Proceso');
+                btnProceso.onclick = () => cambiarEstadoConComentario(inc.id, 'En Proceso');
                 cellAcciones.appendChild(btnProceso);
             } else if (inc.estado === 'En Proceso') {
                 const btnResuelto = document.createElement('button');
                 btnResuelto.textContent = 'Resolver';
                 btnResuelto.className = 'accion';
-                btnResuelto.onclick = () => cambiarEstado(inc.id, 'Resuelto');
+                btnResuelto.onclick = () => cambiarEstadoConComentario(inc.id, 'Resuelto');
                 cellAcciones.appendChild(btnResuelto);
             } else {
                 cellAcciones.textContent = '---';
@@ -176,27 +187,34 @@ async function cargarIncidenciasRevisor() {
     }
 }
 
-async function cambiarEstado(id, nuevoEstado) {
+async function cambiarEstadoConComentario(id, nuevoEstado) {
+    let comentario = '';
+    if (nuevoEstado === 'En Proceso') {
+        comentario = prompt('Ingrese un comentario sobre la acción (ej. "Se asignó al equipo de limpieza"):');
+    } else if (nuevoEstado === 'Resuelto') {
+        comentario = prompt('Ingrese un comentario sobre la resolución (ej. "Se limpió el salón"):');
+    }
+    if (comentario === null) return;
     try {
         const res = await fetch(`/api/incidencias/${id}/estado`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ estado: nuevoEstado })
+            body: JSON.stringify({ estado: nuevoEstado, comentario })
         });
         if (res.ok) {
-            alert('Estado actualizado');
+            mostrarNotificacion('Estado actualizado con comentario', 'success');
             cargarIncidenciasRevisor();
         } else {
-            alert('Error');
+            const err = await res.json();
+            mostrarNotificacion('Error: ' + err.error, 'error');
         }
     } catch (err) {
-        alert('Error de red');
+        mostrarNotificacion('Error de red', 'error');
     }
 }
 
-// ========== ADMIN: pestañas, CRUD edificios, usuarios, estadísticas y salones ==========
+// ========== ADMIN ==========
 function inicializarAdmin() {
-    // Pestañas
     const tabs = document.querySelectorAll('.tab-btn');
     tabs.forEach(btn => {
         btn.addEventListener('click', () => {
@@ -208,19 +226,16 @@ function inicializarAdmin() {
             if (tabId === 'usuarios') cargarUsuarios();
             if (tabId === 'edificios') cargarEdificiosAdmin();
             if (tabId === 'salones') {
-                cargarEdificiosParaSalones();  // llena el select de filtro
-                cargarTodosSalones();           // carga todos los salones
+                cargarEdificiosParaSalones();
+                cargarTodosSalones();
             }
             if (tabId === 'estadisticas') cargarEstadisticas();
         });
     });
-    // Cargar datos iniciales
     cargarUsuarios();
     cargarEdificiosAdmin();
     cargarEstadisticas();
-    // Formulario agregar edificio
     document.getElementById('edificioForm').addEventListener('submit', agregarEdificio);
-    // Formulario agregar salón
     document.getElementById('salonForm').addEventListener('submit', agregarSalon);
     document.getElementById('btnCargarSalones').addEventListener('click', () => {
         const edificioId = document.getElementById('selectEdificioSalon').value;
@@ -284,14 +299,14 @@ async function agregarEdificio(e) {
             body: JSON.stringify({ nombre })
         });
         if (res.ok) {
-            alert('Edificio agregado');
+            mostrarNotificacion('Edificio agregado', 'success');
             document.getElementById('edificioNombre').value = '';
             cargarEdificiosAdmin();
         } else {
-            alert('Error');
+            mostrarNotificacion('Error', 'error');
         }
     } catch (err) {
-        alert('Error de red');
+        mostrarNotificacion('Error de red', 'error');
     }
 }
 
@@ -304,10 +319,10 @@ function editarEdificio(id, nombreActual) {
             body: JSON.stringify({ nombre: nuevoNombre })
         }).then(res => {
             if (res.ok) {
-                alert('Actualizado');
+                mostrarNotificacion('Actualizado', 'success');
                 cargarEdificiosAdmin();
-            } else alert('Error');
-        }).catch(err => alert(err));
+            } else mostrarNotificacion('Error', 'error');
+        }).catch(err => mostrarNotificacion('Error de red', 'error'));
     }
 }
 
@@ -316,10 +331,10 @@ async function eliminarEdificio(id) {
         try {
             const res = await fetch(`/api/edificios/${id}`, { method: 'DELETE' });
             if (res.ok) {
-                alert('Eliminado');
+                mostrarNotificacion('Eliminado', 'success');
                 cargarEdificiosAdmin();
-            } else alert('Error');
-        } catch (err) { alert(err); }
+            } else mostrarNotificacion('Error', 'error');
+        } catch (err) { mostrarNotificacion('Error de red', 'error'); }
     }
 }
 
@@ -340,7 +355,7 @@ async function cargarEstadisticas() {
     }
 }
 
-// ========== FUNCIONES PARA GESTIÓN DE SALONES (ADMIN) ==========
+// ========== GESTIÓN DE SALONES ==========
 async function cargarEdificiosParaSalones() {
     const res = await fetch('/api/edificios');
     const edificios = await res.json();
@@ -363,7 +378,6 @@ async function cargarTodosSalones() {
 async function cargarSalonesPorEdificio(edificioId) {
     const res = await fetch(`/api/salones?edificio_id=${edificioId}`);
     const salones = await res.json();
-    // Obtener nombre del edificio para mostrarlo en la tabla
     const edificioRes = await fetch('/api/edificios');
     const edificios = await edificioRes.json();
     const edificio = edificios.find(e => e.id == edificioId);
@@ -409,17 +423,17 @@ async function agregarSalon(e) {
             body: JSON.stringify({ nombre, edificio_id })
         });
         if (res.ok) {
-            alert('Salón agregado');
+            mostrarNotificacion('Salón agregado', 'success');
             document.getElementById('salonNombre').value = '';
             const selectEdificio = document.getElementById('selectEdificioSalon').value;
             if (selectEdificio) cargarSalonesPorEdificio(selectEdificio);
             else cargarTodosSalones();
         } else {
             const err = await res.json();
-            alert('Error: ' + err.error);
+            mostrarNotificacion('Error: ' + err.error, 'error');
         }
     } catch (err) {
-        alert('Error de red');
+        mostrarNotificacion('Error de red', 'error');
     }
 }
 
@@ -432,12 +446,12 @@ function editarSalon(id, nombreActual) {
             body: JSON.stringify({ nombre: nuevoNombre })
         }).then(res => {
             if (res.ok) {
-                alert('Actualizado');
+                mostrarNotificacion('Actualizado', 'success');
                 const selectEdificio = document.getElementById('selectEdificioSalon').value;
                 if (selectEdificio) cargarSalonesPorEdificio(selectEdificio);
                 else cargarTodosSalones();
-            } else alert('Error');
-        }).catch(err => alert(err));
+            } else mostrarNotificacion('Error', 'error');
+        }).catch(err => mostrarNotificacion('Error de red', 'error'));
     }
 }
 
@@ -446,14 +460,14 @@ async function eliminarSalon(id) {
         try {
             const res = await fetch(`/api/salones/${id}`, { method: 'DELETE' });
             if (res.ok) {
-                alert('Eliminado');
+                mostrarNotificacion('Eliminado', 'success');
                 const selectEdificio = document.getElementById('selectEdificioSalon').value;
                 if (selectEdificio) cargarSalonesPorEdificio(selectEdificio);
                 else cargarTodosSalones();
             } else {
                 const err = await res.json();
-                alert('Error: ' + err.error);
+                mostrarNotificacion('Error: ' + err.error, 'error');
             }
-        } catch (err) { alert(err); }
+        } catch (err) { mostrarNotificacion('Error de red', 'error'); }
     }
 }

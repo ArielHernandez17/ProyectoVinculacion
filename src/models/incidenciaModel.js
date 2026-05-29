@@ -31,13 +31,13 @@ async function createIncidencia(descripcion, usuarioId, salonId) {
     }
 }
 
-// Obtener incidencias con filtro opcional por estado y detalles de salón/edificio
+// Obtener incidencias con filtro opcional
 async function getIncidencias(filtroEstado = null) {
     let conn;
     try {
         conn = await pool.getConnection();
         let query = `
-            SELECT i.id, i.descripcion, i.estado, i.fecha_creacion,
+            SELECT i.id, i.descripcion, i.estado, i.comentario, i.fecha_creacion,
                    u.nombre AS usuario_nombre,
                    s.nombre AS salon_nombre,
                    e.nombre AS edificio_nombre
@@ -61,18 +61,26 @@ async function getIncidencias(filtroEstado = null) {
     }
 }
 
-async function updateEstadoIncidencia(id, nuevoEstado) {
+// Actualizar estado y comentario de una incidencia
+async function updateEstadoIncidencia(id, nuevoEstado, comentario = null) {
     let conn;
     try {
         conn = await pool.getConnection();
-        // Obtener estado actual
         const rows = await conn.query('SELECT estado FROM incidencias WHERE id = ?', [id]);
         if (rows.length === 0) return false;
         const estadoActual = rows[0].estado;
         if (estadoActual === 'Resuelto') {
             throw new Error('No se puede modificar una incidencia que ya está resuelta');
         }
-        const result = await conn.query('UPDATE incidencias SET estado = ? WHERE id = ?', [nuevoEstado, id]);
+        let query = 'UPDATE incidencias SET estado = ?';
+        const params = [nuevoEstado];
+        if (comentario !== null) {
+            query += ', comentario = ?';
+            params.push(comentario);
+        }
+        query += ' WHERE id = ?';
+        params.push(id);
+        const result = await conn.query(query, params);
         return result.affectedRows > 0;
     } catch (err) {
         throw err;
@@ -81,7 +89,7 @@ async function updateEstadoIncidencia(id, nuevoEstado) {
     }
 }
 
-// Estadísticas: cantidad de incidencias por edificio y estado (GROUP BY)
+// Estadísticas (GROUP BY)
 async function getEstadisticas() {
     let conn;
     try {
@@ -155,7 +163,7 @@ async function deleteEdificio(id) {
     }
 }
 
-// Usuarios (para admin)
+// Usuarios
 async function getUsuarios() {
     let conn;
     try {
@@ -174,7 +182,7 @@ async function getUsuarios() {
     }
 }
 
-// ========== CRUD SALONES (para admin) ==========
+// CRUD Salones (para admin)
 async function getAllSalones() {
     let conn;
     try {
@@ -223,7 +231,6 @@ async function deleteSalon(id) {
     let conn;
     try {
         conn = await pool.getConnection();
-        // Verificar si tiene incidencias asociadas
         const incidencias = await conn.query('SELECT id FROM incidencias WHERE salon_id = ? LIMIT 1', [id]);
         if (incidencias.length > 0) {
             throw new Error('No se puede eliminar el salón porque tiene incidencias asociadas.');
@@ -248,7 +255,6 @@ module.exports = {
     updateEdificio,
     deleteEdificio,
     getUsuarios,
-    // Nuevas:
     getAllSalones,
     createSalon,
     updateSalon,
