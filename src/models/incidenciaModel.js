@@ -61,11 +61,17 @@ async function getIncidencias(filtroEstado = null) {
     }
 }
 
-// Actualizar estado de una incidencia
 async function updateEstadoIncidencia(id, nuevoEstado) {
     let conn;
     try {
         conn = await pool.getConnection();
+        // Obtener estado actual
+        const rows = await conn.query('SELECT estado FROM incidencias WHERE id = ?', [id]);
+        if (rows.length === 0) return false;
+        const estadoActual = rows[0].estado;
+        if (estadoActual === 'Resuelto') {
+            throw new Error('No se puede modificar una incidencia que ya está resuelta');
+        }
         const result = await conn.query('UPDATE incidencias SET estado = ? WHERE id = ?', [nuevoEstado, id]);
         return result.affectedRows > 0;
     } catch (err) {

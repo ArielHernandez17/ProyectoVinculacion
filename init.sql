@@ -116,3 +116,8 @@ INSERT INTO incidencias (descripcion, usuario_id, salon_id, estado) VALUES
 ('Basura en el piso', 3, 1, 'Pendiente'),
 ('Baño sucio', 3, 6, 'En Proceso'),
 ('Pintarrón sin borrar', 3, 11, 'Resuelto');
+
+-- Índices para mejorar rendimiento
+CREATE INDEX idx_incidencias_estado ON incidencias(estado);
+CREATE INDEX idx_incidencias_salon ON incidencias(salon_id);
+CREATE INDEX idx_salones_edificio ON salones(edificio_id);
