@@ -156,4 +156,3 @@ Se ha elaborado un video donde se explica el funcionamiento del sistema, la arqu
 ## 12. Licencia
 
 Este proyecto es de uso académico y no tiene fines comerciales. Puede ser utilizado como referencia para otros trabajos escolares, citando la fuente original.
-```
