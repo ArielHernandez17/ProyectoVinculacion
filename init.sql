@@ -122,3 +122,24 @@ INSERT INTO incidencias (descripcion, usuario_id, salon_id, estado, comentario) 
 CREATE INDEX idx_incidencias_estado ON incidencias(estado);
 CREATE INDEX idx_incidencias_salon ON incidencias(salon_id);
 CREATE INDEX idx_salones_edificio ON salones(edificio_id);
+
+-- ========== MEJORAS AVANZADAS ==========
+
+-- Columna para almacenar ruta de imagen en incidencias
+ALTER TABLE incidencias ADD COLUMN imagen_path VARCHAR(255) NULL AFTER comentario;
+
+-- Tabla de historial de cambios de estado
+CREATE TABLE IF NOT EXISTS incidencias_historial (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    incidencia_id INT NOT NULL,
+    estado_anterior ENUM('Pendiente', 'En Proceso', 'Resuelto') NOT NULL,
+    estado_nuevo ENUM('Pendiente', 'En Proceso', 'Resuelto') NOT NULL,
+    comentario TEXT NULL,
+    usuario_id INT NOT NULL,
+    fecha_cambio TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (incidencia_id) REFERENCES incidencias(id) ON DELETE CASCADE,
+    FOREIGN KEY (usuario_id) REFERENCES usuarios(id) ON DELETE CASCADE
+);
+
+-- Índice para historial
+CREATE INDEX idx_historial_incidencia ON incidencias_historial(incidencia_id);

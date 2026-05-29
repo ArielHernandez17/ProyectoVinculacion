@@ -9,17 +9,25 @@
     <div class="container">
         <h1>Administración FES Aragón</h1>
         <div class="user-info" id="userInfo"></div>
+
         <div class="tabs">
             <button class="tab-btn active" data-tab="usuarios">Usuarios</button>
             <button class="tab-btn" data-tab="edificios">Edificios</button>
             <button class="tab-btn" data-tab="salones">Salones</button>
             <button class="tab-btn" data-tab="estadisticas">Estadísticas</button>
         </div>
+
         <!-- Pestaña Usuarios -->
         <div id="usuarios" class="tab-content active">
             <h2>Lista de Usuarios</h2>
-            <table id="usuariosTable"><thead><tr><th>ID</th><th>Correo</th><th>Nombre</th><th>Rol</th></tr></thead><tbody></tbody></table>
+            <table id="usuariosTable">
+                <thead>
+                    <tr><th>ID</th><th>Correo</th><th>Nombre</th><th>Rol</th></tr>
+                </thead>
+                <tbody></tbody>
+            </table>
         </div>
+
         <!-- Pestaña Edificios (CRUD) -->
         <div id="edificios" class="tab-content">
             <h2>Gestión de Edificios</h2>
@@ -27,33 +35,48 @@
                 <input type="text" id="edificioNombre" placeholder="Nombre del edificio" required>
                 <button type="submit">Agregar Edificio</button>
             </form>
-            <table id="edificiosTable"><thead><tr><th>ID</th><th>Nombre</th><th>Acciones</th></tr></thead><tbody></tbody></table>
+            <table id="edificiosTable">
+                <thead><tr><th>ID</th><th>Nombre</th><th>Acciones</th></tr></thead>
+                <tbody></tbody>
+            </table>
         </div>
-        <!-- Pestaña Salones -->
-<div id="salones" class="tab-content">
-    <h2>Gestión de Salones</h2>
-    <div>
-        <label>Filtrar por edificio:</label>
-        <select id="selectEdificioSalon">
-            <option value="">-- Todos los edificios --</option>
-        </select>
-        <button id="btnCargarSalones">Cargar Salones</button>
-    </div>
-    <form id="salonForm" style="margin-top: 20px;">
-        <input type="text" id="salonNombre" placeholder="Nombre del salón (ej. A110)" required>
-        <input type="hidden" id="salonEdificioId" value="">
-        <button type="submit">Agregar Salón</button>
-    </form>
-    <table id="salonesTable">
-        <thead><tr><th>ID</th><th>Nombre</th><th>Edificio</th><th>Acciones</th></tr></thead>
-        <tbody></tbody>
-    </table>
-</div>
+
+        <!-- Pestaña Salones (con paginación y filtro por edificio) -->
+        <div id="salones" class="tab-content">
+            <h2>Gestión de Salones</h2>
+            <div>
+                <label>Filtrar por edificio:</label>
+                <select id="selectEdificioSalon">
+                    <option value="">-- Todos los edificios --</option>
+                </select>
+                <button id="btnCargarSalones" style="display: none;">(el select ya filtra)</button>
+            </div>
+            <form id="salonForm" style="margin-top: 20px;">
+                <input type="text" id="salonNombre" placeholder="Nombre del salón (ej. A110)" required>
+                <input type="hidden" id="salonEdificioId" value="">
+                <button type="submit">Agregar Salón</button>
+            </form>
+            <table id="salonesTable">
+                <thead><tr><th>ID</th><th>Nombre</th><th>Edificio</th><th>Acciones</th></tr></thead>
+                <tbody></tbody>
+            </table>
+            <div id="paginacion-salones" style="margin-top: 20px; text-align: center;">
+                <button id="btn-anterior-salones">Anterior</button>
+                <span>Página <span id="pagina-actual-salones">1</span> de <span id="total-paginas-salones">1</span></span>
+                <button id="btn-siguiente-salones">Siguiente</button>
+            </div>
+        </div>
+
         <!-- Pestaña Estadísticas -->
         <div id="estadisticas" class="tab-content">
             <h2>Reportes por Edificio y Estado</h2>
-            <table id="statsTable"><thead><tr><th>Edificio</th><th>Estado</th><th>Cantidad</th></tr></thead><tbody></tbody></table>
+            <button id="exportarCSV" style="margin-bottom: 15px;">Exportar a CSV</button>
+            <table id="statsTable">
+                <thead><tr><th>Edificio</th><th>Estado</th><th>Cantidad</th></tr></thead>
+                <tbody></tbody>
+            </table>
         </div>
+
         <button id="logoutBtn" class="logout">Cerrar sesión</button>
     </div>
     <script src="/js/main.js"></script>

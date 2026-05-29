@@ -1,12 +1,13 @@
 const incidenciaModel = require('../models/incidenciaModel');
+const multer = require('multer');
+const path = require('path');
+const fs = require('fs');
 
-// Obtener salones de un edificio
+// ========== FUNCIONES ORIGINALES ==========
 async function getSalones(req, res) {
     try {
         const edificioId = req.query.edificio_id;
-        if (!edificioId) {
-            return res.status(400).json({ error: 'Se requiere edificio_id' });
-        }
+        if (!edificioId) return res.status(400).json({ error: 'Se requiere edificio_id' });
         const salones = await incidenciaModel.getSalonesByEdificio(edificioId);
         res.json(salones);
     } catch (err) {
@@ -15,7 +16,6 @@ async function getSalones(req, res) {
     }
 }
 
-// Crear reporte de incidencia
 async function createIncidencia(req, res) {
     try {
         const { descripcion, usuario_id, salon_id } = req.body;
@@ -30,29 +30,31 @@ async function createIncidencia(req, res) {
     }
 }
 
-// Obtener todas las incidencias (con filtro opcional)
-async function getIncidencias(req, res) {
+// ========== NUEVAS FUNCIONES PARA MEJORAS ==========
+async function getIncidenciasPaginadas(req, res) {
     try {
-        const estado = req.query.estado;
-        const incidencias = await incidenciaModel.getIncidencias(estado);
-        res.json(incidencias);
+        const estado = req.query.estado || null;
+        const pagina = parseInt(req.query.pagina) || 1;
+        const limite = parseInt(req.query.limite) || 5;
+        const resultado = await incidenciaModel.getIncidenciasPaginadas(estado, pagina, limite);
+        res.json(resultado);
     } catch (err) {
         console.error(err);
-        res.status(500).json({ error: 'Error al obtener incidencias' });
+        res.status(500).json({ error: 'Error al obtener incidencias paginadas' });
     }
 }
 
-// Cambiar estado y comentario de incidencia
-async function updateEstado(req, res) {
+async function updateEstadoConHistorial(req, res) {
     try {
         const id = req.params.id;
         const { estado, comentario } = req.body;
         if (!['Pendiente', 'En Proceso', 'Resuelto'].includes(estado)) {
             return res.status(400).json({ error: 'Estado no válido' });
         }
-        const success = await incidenciaModel.updateEstadoIncidencia(id, estado, comentario || null);
+        const usuarioId = req.usuario.id;
+        const success = await incidenciaModel.updateEstadoIncidenciaConHistorial(id, estado, comentario || null, usuarioId);
         if (success) {
-            res.json({ mensaje: 'Estado actualizado' });
+            res.json({ mensaje: 'Estado actualizado y registrado en historial' });
         } else {
             res.status(404).json({ error: 'Incidencia no encontrada' });
         }
@@ -62,18 +64,86 @@ async function updateEstado(req, res) {
     }
 }
 
-// Estadísticas
+async function getHistorial(req, res) {
+    try {
+        const id = req.params.id;
+        const historial = await incidenciaModel.obtenerHistorial(id);
+        res.json(historial);
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: 'Error al obtener historial' });
+    }
+}
+
+async function exportarIncidenciasCSV(req, res) {
+    try {
+        const estado = req.query.estado || null;
+        const incidencias = await incidenciaModel.getIncidenciasParaExportar(estado);
+        const json2csv = require('json2csv').parse;
+        const fields = ['id', 'descripcion', 'estado', 'comentario', 'fecha_creacion', 'usuario', 'edificio', 'salon'];
+        const csv = json2csv(incidencias, { fields });
+        res.header('Content-Type', 'text/csv');
+        res.attachment(`incidencias_${Date.now()}.csv`);
+        res.send(csv);
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: 'Error al exportar CSV' });
+    }
+}
+
+// Configuración de multer para imágenes
+const storage = multer.diskStorage({
+    destination: function (req, file, cb) {
+        const dir = './src/public/uploads';
+        if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+        cb(null, dir);
+    },
+    filename: function (req, file, cb) {
+        const unique = Date.now() + '-' + Math.round(Math.random() * 1E9);
+        cb(null, unique + path.extname(file.originalname));
+    }
+});
+const upload = multer({ storage, limits: { fileSize: 5 * 1024 * 1024 } }).single('imagen');
+
+async function subirImagen(req, res) {
+    upload(req, res, async (err) => {
+        if (err) return res.status(400).json({ error: err.message });
+        if (!req.file) return res.status(400).json({ error: 'No se envió ninguna imagen' });
+        const incidenciaId = req.params.id;
+        const rutaRelativa = '/uploads/' + req.file.filename;
+        try {
+            await incidenciaModel.guardarRutaImagen(incidenciaId, rutaRelativa);
+            res.json({ mensaje: 'Imagen subida correctamente', ruta: rutaRelativa });
+        } catch (error) {
+            console.error(error);
+            res.status(500).json({ error: 'Error al guardar la imagen' });
+        }
+    });
+}
+
+async function getSalonesPaginados(req, res) {
+    try {
+        const pagina = parseInt(req.query.pagina) || 1;
+        const limite = parseInt(req.query.limite) || 10;
+        const edificioId = req.query.edificio_id || null;
+        const resultado = await incidenciaModel.getSalonesPaginados(pagina, limite, edificioId);
+        res.json(resultado);
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: 'Error al obtener salones paginados' });
+    }
+}
+
+// ========== FUNCIONES EXISTENTES (CRUD, etc.) ==========
 async function getEstadisticas(req, res) {
     try {
         const stats = await incidenciaModel.getEstadisticas();
         res.json(stats);
     } catch (err) {
-        console.error(err);
-        res.status(500).json({ error: 'Error al obtener estadísticas' });
+        res.status(500).json({ error: err.message });
     }
 }
 
-// CRUD Edificios
 async function listEdificios(req, res) {
     try {
         const edificios = await incidenciaModel.getEdificios();
@@ -117,7 +187,6 @@ async function removeEdificio(req, res) {
     }
 }
 
-// Usuarios
 async function listUsuarios(req, res) {
     try {
         const usuarios = await incidenciaModel.getUsuarios();
@@ -127,7 +196,6 @@ async function listUsuarios(req, res) {
     }
 }
 
-// CRUD Salones
 async function listSalones(req, res) {
     try {
         const salones = await incidenciaModel.getAllSalones();
@@ -171,11 +239,16 @@ async function removeSalon(req, res) {
     }
 }
 
+// ========== EXPORTAR TODAS ==========
 module.exports = {
     getSalones,
     createIncidencia,
-    getIncidencias,
-    updateEstado,
+    getIncidenciasPaginadas,
+    updateEstadoConHistorial,
+    getHistorial,
+    exportarIncidenciasCSV,
+    subirImagen,
+    getSalonesPaginados,
     getEstadisticas,
     listEdificios,
     addEdificio,
