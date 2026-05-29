@@ -1,38 +1,40 @@
 version: '3.8'
 
 services:
+  # Servicio de base de datos MariaDB
   db:
     image: mariadb:10.11
     container_name: incidencias_db
     restart: always
     environment:
-      MYSQL_ROOT_PASSWORD: root123
-      MYSQL_DATABASE: incidencias_db
-      MYSQL_USER: user_app
+      MYSQL_ROOT_PASSWORD: root123      # Contraseña del root
+      MYSQL_DATABASE: incidencias_db     # BD creada automáticamente
+      MYSQL_USER: user_app               # Usuario adicional (opcional)
       MYSQL_PASSWORD: user_pass
     ports:
-      - "3307:3306"   # Host:3307 -> Contenedor:3306
+      - "3307:3306"                      # Expone puerto 3307 en host hacia 3306 del contenedor
     volumes:
-      - db_data:/var/lib/mysql
-      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+      - db_data:/var/lib/mysql           # Volumen persistente para datos
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql  # Script de inicialización
     networks:
       - incidencias_net
 
+  # Servicio de la aplicación Node.js
   app:
-    build: .
+    build: .                             # Usa Dockerfile de la raíz
     container_name: incidencias_app
     restart: always
     ports:
-      - "3000:3000"   # Si el 3000 está ocupado, cámbialo a "3002:3000"
+      - "3000:3000"                      # Mapea puerto 3000 del host al 3000 del contenedor
     depends_on:
-      - db
+      - db                               # Espera a que db esté listo
     env_file:
-      - .env
+      - .env                             # Carga variables de entorno desde .env
     networks:
       - incidencias_net
 
 volumes:
-  db_data:
+  db_data:                               # Volumen nombrado para persistencia
 
 networks:
-  incidencias_net:
+  incidencias_net:                       # Red interna entre contenedores

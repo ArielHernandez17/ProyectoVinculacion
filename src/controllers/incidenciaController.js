@@ -1,9 +1,15 @@
-const incidenciaModel = require('../models/incidenciaModel');
-const multer = require('multer');
-const path = require('path');
-const fs = require('fs');
+// Controlador: incidenciaController.js
+// Maneja toda la lógica de negocio relacionada con incidencias: creación, listado paginado,
+// historial de cambios, exportación CSV, subida de imágenes, y CRUD de edificios/salones/usuarios.
 
-// ========== FUNCIONES ORIGINALES ==========
+const incidenciaModel = require('../models/incidenciaModel');
+const multer = require('multer');        // Middleware para manejo de uploads de archivos
+const path = require('path');             // Para trabajar con rutas de archivos
+const fs = require('fs');                 // Para verificar/crear directorios
+
+// ==================== FUNCIONES ORIGINALES (básicas) ====================
+
+// Obtener salones de un edificio específico (sin paginación, usado en selects)
 async function getSalones(req, res) {
     try {
         const edificioId = req.query.edificio_id;
@@ -16,6 +22,7 @@ async function getSalones(req, res) {
     }
 }
 
+// Crear una nueva incidencia (usuario reporta desde el frontend)
 async function createIncidencia(req, res) {
     try {
         const { descripcion, usuario_id, salon_id } = req.body;
@@ -30,29 +37,41 @@ async function createIncidencia(req, res) {
     }
 }
 
-// ========== NUEVAS FUNCIONES PARA MEJORAS ==========
+// ==================== NUEVAS FUNCIONES PARA MEJORAS (paginación, historial, exportación) ====================
+
+// Obtener incidencias con paginación y filtro opcional por estado
 async function getIncidenciasPaginadas(req, res) {
     try {
-        const estado = req.query.estado || null;
-        const pagina = parseInt(req.query.pagina) || 1;
-        const limite = parseInt(req.query.limite) || 5;
+        const estado = req.query.estado || null;          // 'Pendiente', 'En Proceso', 'Resuelto', o null
+        const pagina = parseInt(req.query.pagina) || 1;   // Página actual (por defecto 1)
+        const limite = parseInt(req.query.limite) || 5;   // Registros por página (defecto 5)
         const resultado = await incidenciaModel.getIncidenciasPaginadas(estado, pagina, limite);
-        res.json(resultado);
+        res.json(resultado);  // Devuelve { data: [], total, pagina, totalPaginas }
     } catch (err) {
         console.error(err);
         res.status(500).json({ error: 'Error al obtener incidencias paginadas' });
     }
 }
 
+// Actualizar el estado de una incidencia y registrar el cambio en el historial
+// Se espera: { estado, comentario (opcional) } en el body
 async function updateEstadoConHistorial(req, res) {
     try {
         const id = req.params.id;
         const { estado, comentario } = req.body;
+
+        // Validar que el estado sea uno de los permitidos
         if (!['Pendiente', 'En Proceso', 'Resuelto'].includes(estado)) {
             return res.status(400).json({ error: 'Estado no válido' });
         }
+
+        // El usuario que realiza el cambio se obtiene del token (previamente verificado por middleware)
         const usuarioId = req.usuario.id;
-        const success = await incidenciaModel.updateEstadoIncidenciaConHistorial(id, estado, comentario || null, usuarioId);
+
+        const success = await incidenciaModel.updateEstadoIncidenciaConHistorial(
+            id, estado, comentario || null, usuarioId
+        );
+
         if (success) {
             res.json({ mensaje: 'Estado actualizado y registrado en historial' });
         } else {
@@ -64,6 +83,7 @@ async function updateEstadoConHistorial(req, res) {
     }
 }
 
+// Obtener el historial de cambios de una incidencia específica
 async function getHistorial(req, res) {
     try {
         const id = req.params.id;
@@ -75,13 +95,21 @@ async function getHistorial(req, res) {
     }
 }
 
+// Exportar incidencias a CSV (con filtro opcional por estado)
 async function exportarIncidenciasCSV(req, res) {
     try {
         const estado = req.query.estado || null;
+        // Obtener datos planos desde el modelo
         const incidencias = await incidenciaModel.getIncidenciasParaExportar(estado);
+
+        // Importar json2csv dinámicamente (solo cuando se usa esta función)
         const json2csv = require('json2csv').parse;
+
+        // Definir el orden de las columnas en el CSV
         const fields = ['id', 'descripcion', 'estado', 'comentario', 'fecha_creacion', 'usuario', 'edificio', 'salon'];
         const csv = json2csv(incidencias, { fields });
+
+        // Configurar headers para descarga de archivo
         res.header('Content-Type', 'text/csv');
         res.attachment(`incidencias_${Date.now()}.csv`);
         res.send(csv);
@@ -91,26 +119,38 @@ async function exportarIncidenciasCSV(req, res) {
     }
 }
 
-// Configuración de multer para imágenes
+// ==================== CONFIGURACIÓN DE MULTER PARA SUBIR IMÁGENES ====================
+
+// Configuración de almacenamiento en disco
 const storage = multer.diskStorage({
     destination: function (req, file, cb) {
+        // Ruta donde se guardarán las imágenes (carpeta pública accesible desde el frontend)
         const dir = './src/public/uploads';
+        // Crear la carpeta recursivamente si no existe
         if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
         cb(null, dir);
     },
     filename: function (req, file, cb) {
+        // Generar un nombre único: timestamp + número aleatorio + extensión original
         const unique = Date.now() + '-' + Math.round(Math.random() * 1E9);
         cb(null, unique + path.extname(file.originalname));
     }
 });
+
+// Middleware de multer: acepta un solo archivo con campo 'imagen', límite 5MB
 const upload = multer({ storage, limits: { fileSize: 5 * 1024 * 1024 } }).single('imagen');
 
+// Endpoint para subir una imagen asociada a una incidencia existente
 async function subirImagen(req, res) {
+    // Ejecutar el middleware de multer dentro del controlador para manejar errores personalizados
     upload(req, res, async (err) => {
         if (err) return res.status(400).json({ error: err.message });
         if (!req.file) return res.status(400).json({ error: 'No se envió ninguna imagen' });
+
         const incidenciaId = req.params.id;
+        // Ruta relativa que se guardará en la BD (para servir la imagen estáticamente)
         const rutaRelativa = '/uploads/' + req.file.filename;
+
         try {
             await incidenciaModel.guardarRutaImagen(incidenciaId, rutaRelativa);
             res.json({ mensaje: 'Imagen subida correctamente', ruta: rutaRelativa });
@@ -121,6 +161,7 @@ async function subirImagen(req, res) {
     });
 }
 
+// Obtener salones paginados (con filtro opcional por edificio) - útil para listas largas
 async function getSalonesPaginados(req, res) {
     try {
         const pagina = parseInt(req.query.pagina) || 1;
@@ -134,7 +175,9 @@ async function getSalonesPaginados(req, res) {
     }
 }
 
-// ========== FUNCIONES EXISTENTES (CRUD, etc.) ==========
+// ==================== FUNCIONES CRUD PARA EDIFICIOS, SALONES Y USUARIOS ====================
+
+// Estadísticas generales (total incidencias por estado, etc.)
 async function getEstadisticas(req, res) {
     try {
         const stats = await incidenciaModel.getEstadisticas();
@@ -144,6 +187,7 @@ async function getEstadisticas(req, res) {
     }
 }
 
+// Listar todos los edificios
 async function listEdificios(req, res) {
     try {
         const edificios = await incidenciaModel.getEdificios();
@@ -153,6 +197,7 @@ async function listEdificios(req, res) {
     }
 }
 
+// Crear un nuevo edificio (solo admin)
 async function addEdificio(req, res) {
     try {
         const { nombre } = req.body;
@@ -164,6 +209,7 @@ async function addEdificio(req, res) {
     }
 }
 
+// Editar nombre de edificio existente
 async function editEdificio(req, res) {
     try {
         const { id } = req.params;
@@ -176,6 +222,7 @@ async function editEdificio(req, res) {
     }
 }
 
+// Eliminar edificio (solo si no tiene salones asociados, la BD debería validar)
 async function removeEdificio(req, res) {
     try {
         const { id } = req.params;
@@ -187,6 +234,7 @@ async function removeEdificio(req, res) {
     }
 }
 
+// Listar todos los usuarios (para asignar roles o mostrar en reportes)
 async function listUsuarios(req, res) {
     try {
         const usuarios = await incidenciaModel.getUsuarios();
@@ -196,6 +244,7 @@ async function listUsuarios(req, res) {
     }
 }
 
+// Listar todos los salones (sin filtro, versión simple)
 async function listSalones(req, res) {
     try {
         const salones = await incidenciaModel.getAllSalones();
@@ -205,6 +254,7 @@ async function listSalones(req, res) {
     }
 }
 
+// Crear un nuevo salón asociado a un edificio
 async function addSalon(req, res) {
     try {
         const { nombre, edificio_id } = req.body;
@@ -216,6 +266,7 @@ async function addSalon(req, res) {
     }
 }
 
+// Editar nombre de un salón (solo nombre, no se cambia de edificio)
 async function editSalon(req, res) {
     try {
         const { id } = req.params;
@@ -228,6 +279,7 @@ async function editSalon(req, res) {
     }
 }
 
+// Eliminar salón
 async function removeSalon(req, res) {
     try {
         const { id } = req.params;
@@ -239,7 +291,8 @@ async function removeSalon(req, res) {
     }
 }
 
-// ========== EXPORTAR TODAS ==========
+// ==================== EXPORTACIÓN DE TODAS LAS FUNCIONES ====================
+// Se exportan todas para que las rutas puedan usarlas según los endpoints
 module.exports = {
     getSalones,
     createIncidencia,

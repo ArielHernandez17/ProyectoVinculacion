@@ -3,12 +3,15 @@
 <head>
     <meta charset="UTF-8">
     <title>Admin - Sistema Incidencias FES Aragón</title>
+    <!-- Hoja de estilos principal (CSS con diseño moderno, variables, tablas, tarjetas, etc.) -->
     <link rel="stylesheet" href="/css/styles.css">
 </head>
 <body>
     <div class="container">
+        <!-- Muestra información del usuario autenticado (nombre, rol, correo) -->
         <div class="user-info" id="userInfo"></div>
 
+        <!-- Sistema de pestañas (tabs) para organizar las secciones de administración -->
         <div class="tabs">
             <button class="tab-btn active" data-tab="incidencias">Incidencias</button>
             <button class="tab-btn" data-tab="usuarios">Usuarios</button>
@@ -18,13 +21,17 @@
         </div>
 
         <div class="main-grid">
+            <!-- Área con scroll interno para el contenido (evita scroll global) -->
             <div class="content-scroll">
-                <!-- Pestaña Incidencias (nueva) -->
+                
+                <!-- ================= PESTAÑA INCIDENCIAS ================= -->
                 <div id="incidencias" class="tab-content card active">
                     <div class="card-header">
                         <h2>Todas las Incidencias</h2>
+                        <!-- Botón para exportar a CSV la tabla de incidencias (solo admin) -->
                         <button id="exportarCSVIncidencias" class="btn-secondary">Exportar a CSV</button>
                     </div>
+                    <!-- Barra de filtros: permite filtrar incidencias por estado -->
                     <div class="filters-bar">
                         <div class="filter-group">
                             <label>Filtrar por estado</label>
@@ -36,6 +43,7 @@
                             </select>
                         </div>
                     </div>
+                    <!-- Tabla de incidencias para admin (incluye columna de acciones: ver historial, ver foto) -->
                     <table id="incidenciasAdminTable">
                         <thead>
                             <tr>
@@ -45,6 +53,7 @@
                         </thead>
                         <tbody></tbody>
                     </table>
+                    <!-- Controles de paginación para incidencias (10 por página) -->
                     <div class="pagination">
                         <button id="btn-anterior-admin">Anterior</button>
                         <span>Página <span id="pagina-actual-admin">1</span> de <span id="total-paginas-admin">1</span></span>
@@ -52,37 +61,45 @@
                     </div>
                 </div>
 
-                <!-- Pestaña Usuarios -->
+                <!-- ================= PESTAÑA USUARIOS ================= -->
                 <div id="usuarios" class="tab-content card">
                     <div class="card-header">
                         <h2>Lista de Usuarios</h2>
                     </div>
+                    <!-- Tabla de usuarios (solo lectura, muestra correo, nombre y rol) -->
                     <table id="usuariosTable">
-                        <thead><tr><th>ID</th><th>Correo</th><th>Nombre</th><th>Rol</th></tr></thead>
+                        <thead>
+                            <tr><th>ID</th><th>Correo</th><th>Nombre</th><th>Rol</th></tr>
+                        </thead>
                         <tbody></tbody>
                     </table>
                 </div>
 
-                <!-- Pestaña Edificios -->
+                <!-- ================= PESTAÑA EDIFICIOS ================= -->
                 <div id="edificios" class="tab-content card">
                     <div class="card-header">
                         <h2>Gestión de Edificios</h2>
                     </div>
+                    <!-- Formulario para agregar un nuevo edificio (solo admin) -->
                     <form id="edificioForm" style="margin-bottom: 1rem;">
                         <input type="text" id="edificioNombre" placeholder="Nombre del edificio" required>
                         <button type="submit">Agregar Edificio</button>
                     </form>
+                    <!-- Tabla de edificios con botones Editar/Eliminar -->
                     <table id="edificiosTable">
-                        <thead><tr><th>ID</th><th>Nombre</th><th>Acciones</th></tr></thead>
+                        <thead>
+                            <tr><th>ID</th><th>Nombre</th><th>Acciones</th></tr>
+                        </thead>
                         <tbody></tbody>
                     </table>
                 </div>
 
-                <!-- Pestaña Salones -->
+                <!-- ================= PESTAÑA SALONES ================= -->
                 <div id="salones" class="tab-content card">
                     <div class="card-header">
                         <h2>Gestión de Salones</h2>
                     </div>
+                    <!-- Filtro por edificio para la tabla de salones -->
                     <div class="filters-bar">
                         <div class="filter-group">
                             <label>Filtrar por edificio</label>
@@ -91,15 +108,20 @@
                             </select>
                         </div>
                     </div>
+                    <!-- Formulario para agregar salón (nombre + ID del edificio mediante prompt) -->
                     <form id="salonForm" style="margin: 1rem 0;">
                         <input type="text" id="salonNombre" placeholder="Nombre del salón (ej. A110)" required>
                         <input type="hidden" id="salonEdificioId" value="">
                         <button type="submit">Agregar Salón</button>
                     </form>
+                    <!-- Tabla de salones paginada con botones Editar/Eliminar -->
                     <table id="salonesTable">
-                        <thead><tr><th>ID</th><th>Nombre</th><th>Edificio</th><th>Acciones</th></tr></thead>
+                        <thead>
+                            <tr><th>ID</th><th>Nombre</th><th>Edificio</th><th>Acciones</th></tr>
+                        </thead>
                         <tbody></tbody>
                     </table>
+                    <!-- Paginación para salones (10 por página) -->
                     <div class="pagination">
                         <button id="btn-anterior-salones">Anterior</button>
                         <span>Página <span id="pagina-actual-salones">1</span> de <span id="total-paginas-salones">1</span></span>
@@ -107,22 +129,28 @@
                     </div>
                 </div>
 
-                <!-- Pestaña Estadísticas -->
+                <!-- ================= PESTAÑA ESTADÍSTICAS ================= -->
                 <div id="estadisticas" class="tab-content card">
                     <div class="card-header">
                         <h2>Reportes por Edificio y Estado</h2>
+                        <!-- Botón para exportar las estadísticas a CSV -->
                         <button id="exportarCSV" class="btn-secondary">Exportar a CSV</button>
                     </div>
+                    <!-- Tabla de estadísticas: cantidad de incidencias por edificio y estado -->
                     <table id="statsTable">
-                        <thead><tr><th>Edificio</th><th>Estado</th><th>Cantidad</th></tr></thead>
+                        <thead>
+                            <tr><th>Edificio</th><th>Estado</th><th>Cantidad</th></tr>
+                        </thead>
                         <tbody></tbody>
                     </table>
                 </div>
             </div>
         </div>
 
+        <!-- Botón de cerrar sesión (limpia sessionStorage y redirige a login) -->
         <button id="logoutBtn" class="logout">Cerrar sesión</button>
     </div>
+    <!-- Archivo JavaScript principal que contiene toda la lógica de frontend -->
     <script src="/js/main.js"></script>
 </body>
 </html>

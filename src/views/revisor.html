@@ -3,10 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <title>Revisor de Limpieza - FES Aragón</title>
+    <!-- Misma hoja de estilos global -->
     <link rel="stylesheet" href="/css/styles.css">
 </head>
 <body>
     <div class="container">
+        <!-- Muestra nombre, rol y correo del usuario autenticado -->
         <div class="user-info" id="userInfo"></div>
 
         <div class="main-grid">
@@ -15,6 +17,7 @@
                     <div class="card-header">
                         <h2>Incidencias Pendientes y en Proceso</h2>
                     </div>
+                    <!-- Filtros rápidos con botones (Todas, Pendientes, En Proceso) -->
                     <div class="filters-bar">
                         <div class="filter-group">
                             <label>Filtrar por estado</label>
@@ -25,6 +28,7 @@
                             </div>
                         </div>
                     </div>
+                    <!-- Tabla de incidencias con acciones: cambiar estado, subir foto, ver foto -->
                     <table id="incidenciasTable">
                         <thead>
                             <tr>
@@ -34,6 +38,7 @@
                         </thead>
                         <tbody></tbody>
                     </table>
+                    <!-- Paginación (5 incidencias por página, controles con funciones globales) -->
                     <div class="pagination">
                         <button id="btn-anterior" onclick="cambiarPaginaIncidencias(-1)">Anterior</button>
                         <span>Página <span id="pagina-actual">1</span> de <span id="total-paginas">1</span></span>
@@ -43,8 +48,10 @@
             </div>
         </div>
 
+        <!-- Botón de cierre de sesión (limpia sessionStorage y redirige a login) -->
         <button id="logoutBtn" class="logout">Cerrar sesión</button>
     </div>
+    <!-- Lógica de la vista revisor (carga de incidencias, cambios de estado, subida de imágenes) -->
     <script src="/js/main.js"></script>
 </body>
 </html>

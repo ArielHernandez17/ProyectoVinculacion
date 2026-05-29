@@ -1,43 +1,50 @@
 /* =======================================================
    1. RESET Y VARIABLES GLOBALES (Diseño 2026)
    ======================================================= */
+
+/* Reset básico: elimina márgenes y paddings por defecto, y usa box-sizing border-box
+   para que paddings y borders no afecten el ancho total */
 * {
     margin: 0;
     padding: 0;
     box-sizing: border-box;
 }
 
+/* Variables CSS (Custom Properties) para mantener consistencia de diseño
+   Fácilmente modificables para crear temas o ajustes globales */
 :root {
-    --primary-color: #2563eb;
-    --primary-dark: #1e40af;
-    --primary-light: #dbeafe;
-    --secondary-color: #64748b;
-    --success-color: #10b981;
-    --warning-color: #f59e0b;
-    --danger-color: #ef4444;
-    --bg-color: #f8fafc;
-    --card-bg: #ffffff;
-    --text-primary: #0f172a;
-    --text-secondary: #475569;
-    --border-color: #e2e8f0;
-    --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
-    --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1);
-    --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1);
-    --radius: 0.75rem;
+    --primary-color: #2563eb;      /* Azul principal (botones, enlaces activos) */
+    --primary-dark: #1e40af;       /* Azul más oscuro para hover */
+    --primary-light: #dbeafe;      /* Azul muy claro para fondos suaves */
+    --secondary-color: #64748b;    /* Gris secundario (texto, bordes) */
+    --success-color: #10b981;      /* Verde para notificaciones exitosas */
+    --warning-color: #f59e0b;      /* Ámbar para advertencias */
+    --danger-color: #ef4444;       /* Rojo para errores o botones peligrosos */
+    --bg-color: #f8fafc;           /* Fondo general de la aplicación */
+    --card-bg: #ffffff;            /* Fondo de tarjetas y modales */
+    --text-primary: #0f172a;       /* Texto principal (oscuro) */
+    --text-secondary: #475569;     /* Texto secundario (gris más claro) */
+    --border-color: #e2e8f0;       /* Color de bordes de tablas, inputs, cards */
+    --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);    /* Sombra sutil */
+    --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1);  /* Sombra media */
+    --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1); /* Sombra grande */
+    --radius: 0.75rem;             /* Bordes redondeados estándar */
 }
 
 body {
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
     background-color: var(--bg-color);
     color: var(--text-primary);
-    height: 100vh;
-    overflow: hidden;
-    font-size: 0.875rem;
+    height: 100vh;                 /* Altura completa de la ventana */
+    overflow: hidden;              /* Evita scroll global, se maneja en contenedores internos */
+    font-size: 0.875rem;          /* Tamaño base de fuente (14px) */
 }
 
 /* =======================================================
    2. LAYOUT PRINCIPAL (100vh SIN SCROLL)
    ======================================================= */
+
+/* Contenedor principal de las páginas (Dashboard y Login) */
 .container, .login-container {
     max-width: 1400px;
     margin: 0 auto;
@@ -45,31 +52,32 @@ body {
     height: 100vh;
     display: flex;
     flex-direction: column;
-    overflow: hidden;
+    overflow: hidden;              /* Evita desbordamiento */
 }
 
 .login-container {
-    max-width: 450px;
-    justify-content: center;
+    max-width: 450px;              /* Centrado angosto para login */
+    justify-content: center;       /* Centra verticalmente */
     height: 100vh;
 }
 
-/* Header y contenido principal con Grid */
+/* Grid principal: estructura de header + contenido con scroll interno */
 .main-grid {
     display: flex;
     flex-direction: column;
-    flex: 1;
+    flex: 1;                       /* Ocupa todo el espacio disponible */
     overflow: hidden;
     gap: 1rem;
 }
 
-/* Contenido con scroll interno (solo las tablas si es necesario) */
+/* Área de contenido que permite scroll interno (solo cuando sea necesario) */
 .content-scroll {
     flex: 1;
-    overflow-y: auto;
+    overflow-y: auto;              /* Scroll vertical solo aquí */
     padding-right: 0.25rem;
 }
 
+/* Estilizado de scrollbar (WebKit) para que se vea moderno */
 .content-scroll::-webkit-scrollbar {
     width: 6px;
 }
@@ -85,6 +93,8 @@ body {
 /* =======================================================
    3. ESTILOS DE COMPONENTES (Cards, Botones, Formularios)
    ======================================================= */
+
+/* Tarjetas (cards) para agrupar contenido */
 .card {
     background: var(--card-bg);
     border-radius: var(--radius);
@@ -95,9 +105,10 @@ body {
     transition: box-shadow 0.2s ease;
 }
 .card:hover {
-    box-shadow: var(--shadow-md);
+    box-shadow: var(--shadow-md);   /* Elevación al pasar el mouse */
 }
 
+/* Cabecera de tarjeta con título y acciones */
 .card-header {
     display: flex;
     justify-content: space-between;
@@ -113,7 +124,7 @@ body {
     color: var(--text-primary);
 }
 
-/* Botones modernos */
+/* Botones modernos (base) */
 button, .btn {
     display: inline-flex;
     align-items: center;
@@ -130,8 +141,9 @@ button, .btn {
 }
 button:hover {
     background-color: var(--primary-dark);
-    transform: translateY(-1px);
+    transform: translateY(-1px);    /* Pequeño efecto de elevación */
 }
+/* Variantes de botones */
 .btn-secondary {
     background-color: var(--secondary-color);
 }
@@ -147,7 +159,7 @@ button:hover {
     background-color: var(--bg-color);
 }
 
-/* Botones de acción dentro de tablas */
+/* Botones pequeños para acciones dentro de tablas */
 button.accion {
     padding: 0.25rem 0.75rem;
     font-size: 0.75rem;
@@ -164,7 +176,7 @@ button.accion:hover {
     transform: translateY(-1px);
 }
 
-/* Formularios compactos */
+/* Formularios compactos (inputs, selects, textareas) */
 input, select, textarea {
     width: 100%;
     padding: 0.5rem 0.75rem;
@@ -176,7 +188,7 @@ input, select, textarea {
 input:focus, select:focus, textarea:focus {
     outline: none;
     border-color: var(--primary-color);
-    box-shadow: 0 0 0 3px var(--primary-light);
+    box-shadow: 0 0 0 3px var(--primary-light); /* Anillo de enfoque accesible */
 }
 
 label {
@@ -192,7 +204,7 @@ label {
 table {
     width: 100%;
     border-collapse: collapse;
-    font-size: 0.8125rem;
+    font-size: 0.8125rem;           /* 13px para ahorrar espacio */
 }
 th {
     text-align: left;
@@ -207,6 +219,7 @@ td {
     border-bottom: 1px solid var(--border-color);
     vertical-align: middle;
 }
+/* Resaltado de fila al pasar mouse */
 tr:hover td {
     background-color: var(--bg-color);
 }
@@ -240,7 +253,7 @@ tr:hover td {
 }
 
 /* =======================================================
-   8. CONTENIDO DE PESTAÑAS (ocultar/mostrar)
+   6. CONTENIDO DE PESTAÑAS (ocultar/mostrar con JS)
    ======================================================= */
 .tab-content {
     display: none;
@@ -250,7 +263,7 @@ tr:hover td {
 }
 
 /* =======================================================
-   6. PAGINACIÓN Y NOTIFICACIONES
+   7. PAGINACIÓN Y NOTIFICACIONES
    ======================================================= */
 .pagination {
     display: flex;
@@ -271,6 +284,7 @@ tr:hover td {
     cursor: not-allowed;
 }
 
+/* Notificaciones flotantes (toast) */
 .notification {
     position: fixed;
     top: 1rem;
@@ -286,6 +300,7 @@ tr:hover td {
 .notification.success { background: var(--success-color); }
 .notification.error { background: var(--danger-color); }
 
+/* Información del usuario (header) */
 .user-info {
     background: var(--primary-light);
     padding: 0.5rem 1rem;
@@ -298,13 +313,16 @@ tr:hover td {
 }
 
 /* =======================================================
-   7. RESPONSIVE Y UTILITIES
+   8. RESPONSIVE Y UTILITIES
    ======================================================= */
+
+/* Animación de entrada para notificaciones */
 @keyframes slideIn {
     from { transform: translateX(100%); opacity: 0; }
     to { transform: translateX(0); opacity: 1; }
 }
 
+/* Barra de filtros flexible (se adapta en móviles) */
 .filters-bar {
     display: flex;
     gap: 0.75rem;
@@ -316,4 +334,3 @@ tr:hover td {
     flex: 1;
     min-width: 150px;
 }
-

@@ -2,13 +2,17 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
+    <!-- Configuración viewport para responsive design en móviles -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Login - Sistema Incidencias FES Aragón</title>
+    <!-- Estilos globales (layout, componentes, tabs, etc.) -->
     <link rel="stylesheet" href="/css/styles.css">
 </head>
 <body>
+    <!-- Contenedor específico para login (centrado vertical y horizontal, ancho fijo 450px) -->
     <div class="login-container">
         <h2>Iniciar Sesión</h2>
+        <!-- Formulario de login: envía correo, nombre y rol al endpoint /api/login -->
         <form id="loginForm">
             <label>Correo electrónico (Google)</label>
             <input type="email" id="correo" required placeholder="ejemplo@fes.aragon.unam.mx">
@@ -22,8 +26,10 @@
             </select>
             <button type="submit">Entrar</button>
         </form>
+        <!-- Mensaje informativo para usuarios de demo -->
         <p class="info">Demo: use cualquier correo, se registrará automáticamente.</p>
     </div>
+    <!-- Lógica de autenticación (handleLogin, redirección por rol, almacenamiento de token) -->
     <script src="/js/main.js"></script>
 </body>
 </html>

@@ -8,23 +8,34 @@
 <body>
     <div class="container">
         <h1>Reportar Problema de Limpieza</h1>
+        <!-- Información del usuario logueado -->
         <div class="user-info" id="userInfo"></div>
+
+        <!-- Formulario para reportar incidencias -->
         <form id="reporteForm">
             <label>Edificio:</label>
+            <!-- Select de edificios (se llena dinámicamente desde /api/edificios) -->
             <select id="edificio" required>
                 <option value="">Seleccione edificio</option>
             </select>
+
             <label>Salón:</label>
+            <!-- Select de salones (se activa solo después de seleccionar edificio) -->
             <select id="salon" required disabled>
                 <option value="">Primero seleccione edificio</option>
             </select>
+
             <label>Descripción del problema:</label>
             <textarea id="descripcion" rows="4" required placeholder="Ej: Basura acumulada, baño sucio, etc."></textarea>
+
             <button type="submit">Enviar Reporte</button>
         </form>
-        <div id="mensaje"></div>
+
+        <div id="mensaje"></div> <!-- Espacio para notificaciones (opcional) -->
+
         <button id="logoutBtn" class="logout">Cerrar sesión</button>
     </div>
+    <!-- Lógica de carga de edificios/salones y envío de reporte -->
     <script src="/js/main.js"></script>
 </body>
 </html>

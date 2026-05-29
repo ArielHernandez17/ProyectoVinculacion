@@ -1,26 +1,35 @@
 // =========================================================================
+// ARCHIVO: main.js
+// Frontend principal para las vistas: login, usuario, revisor y admin
+// Maneja autenticación JWT, paginación, CRUD, historial, exportación CSV, etc.
+// =========================================================================
+
+// =========================================================================
 // Variables globales y configuración inicial
 // =========================================================================
-let usuarioActual = null;
-let token = null;
+let usuarioActual = null;          // Objeto con datos del usuario logueado
+let token = null;                  // Token JWT para las peticiones autenticadas
 
-// Configuración de paginación para incidencias (revisor y admin)
+// Paginación para incidencias en vista Revisor
 let paginaActualIncidencias = 1;
 let totalPaginasIncidencias = 1;
-let filtroEstadoActual = null;
+let filtroEstadoActual = null;    // 'Pendiente', 'En Proceso', 'Resuelto' o null
 
+// Paginación para salones en vista Admin
 let paginaActualSalones = 1;
 let totalPaginasSalones = 1;
-let edificioFiltroSalones = null;
+let edificioFiltroSalones = null;  // Filtro por edificio en la tabla de salones
 
+// Paginación para incidencias en vista Admin
 let paginaActualAdminIncidencias = 1;
 let totalPaginasAdminIncidencias = 1;
-let filtroEstadoAdmin = '';
+let filtroEstadoAdmin = '';        // Filtro en admin (cadena vacía = todos)
 
 // =========================================================================
-// Notificaciones flotantes
+// Notificaciones flotantes (toast)
 // =========================================================================
 function mostrarNotificacion(mensaje, tipo = 'success') {
+    // Crea un div temporal con animación slideIn, lo muestra y lo elimina tras 3 segundos
     const notif = document.createElement('div');
     notif.className = `notification ${tipo}`;
     notif.textContent = mensaje;
@@ -32,13 +41,16 @@ function mostrarNotificacion(mensaje, tipo = 'success') {
 }
 
 // =========================================================================
-// Funciones auxiliares para fetch con token
+// Funciones auxiliares para fetch con token JWT
 // =========================================================================
 async function fetchWithAuth(url, options = {}) {
+    // Agrega automáticamente el header Authorization con el token
     if (!options.headers) options.headers = {};
     options.headers['Authorization'] = `Bearer ${token}`;
     options.headers['Content-Type'] = 'application/json';
+
     const response = await fetch(url, options);
+    // Si el token es inválido o expiró (401/403), limpia sesión y redirige al login
     if (response.status === 401 || response.status === 403) {
         mostrarNotificacion('Sesión expirada, vuelva a iniciar sesión', 'error');
         sessionStorage.clear();
@@ -49,13 +61,16 @@ async function fetchWithAuth(url, options = {}) {
 }
 
 // =========================================================================
-// Carga inicial según la vista
+// Carga inicial según la vista (detectada por la URL)
 // =========================================================================
 document.addEventListener('DOMContentLoaded', () => {
     const path = window.location.pathname;
+
+    // Si estamos en login.html, configuramos el formulario
     if (path.includes('login.html')) {
         document.getElementById('loginForm')?.addEventListener('submit', handleLogin);
     } else {
+        // En cualquier otra vista, verificamos sesión activa
         const userStr = sessionStorage.getItem('usuario');
         token = sessionStorage.getItem('token');
         if (!userStr || !token) {
@@ -64,6 +79,8 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         usuarioActual = JSON.parse(userStr);
         mostrarInfoUsuario();
+
+        // Cargar los datos específicos según el rol
         if (path.includes('usuario.html')) {
             cargarEdificios();
             document.getElementById('reporteForm')?.addEventListener('submit', enviarReporte);
@@ -72,18 +89,21 @@ document.addEventListener('DOMContentLoaded', () => {
         } else if (path.includes('admin.html')) {
             inicializarAdmin();
         }
+
+        // Botón de cerrar sesión (presente en todas las vistas internas)
         document.getElementById('logoutBtn')?.addEventListener('click', cerrarSesion);
     }
 });
 
 // =========================================================================
-// Login con JWT
+// Login con JWT (registro automático si el usuario no existe)
 // =========================================================================
 async function handleLogin(e) {
     e.preventDefault();
     const correo = document.getElementById('correo').value;
     const nombre = document.getElementById('nombre').value;
     const rol = document.getElementById('rol').value;
+
     try {
         const res = await fetch('/api/login', {
             method: 'POST',
@@ -92,10 +112,14 @@ async function handleLogin(e) {
         });
         if (!res.ok) throw new Error('Error en login');
         const data = await res.json();
+
+        // Guardamos token y datos en sessionStorage
         sessionStorage.setItem('usuario', JSON.stringify({ id: data.id, nombre: data.nombre, correo: data.correo, rol: data.rol }));
         sessionStorage.setItem('token', data.token);
         token = data.token;
         usuarioActual = { id: data.id, nombre: data.nombre, correo: data.correo, rol: data.rol };
+
+        // Redirigir según el rol devuelto por el backend
         if (data.rol === 'Admin') window.location.href = '/views/admin.html';
         else if (data.rol === 'Revisor') window.location.href = '/views/revisor.html';
         else window.location.href = '/views/usuario.html';
@@ -117,7 +141,7 @@ function cerrarSesion() {
 }
 
 // =========================================================================
-// VISTA USUARIO
+// VISTA USUARIO (reportar incidencias)
 // =========================================================================
 async function cargarEdificios() {
     try {
@@ -131,6 +155,7 @@ async function cargarEdificios() {
             option.textContent = ed.nombre;
             selectEdificio.appendChild(option);
         });
+        // Al cambiar edificio, se cargan los salones correspondientes
         selectEdificio.addEventListener('change', cargarSalones);
     } catch (err) { console.error(err); }
 }
@@ -182,7 +207,7 @@ async function enviarReporte(e) {
 }
 
 // =========================================================================
-// VISTA REVISOR (sin historial)
+// VISTA REVISOR (gestión de incidencias - sin historial)
 // =========================================================================
 async function cargarIncidenciasRevisor(pagina = 1) {
     paginaActualIncidencias = pagina;
@@ -191,6 +216,7 @@ async function cargarIncidenciasRevisor(pagina = 1) {
         const res = await fetchWithAuth(`/api/incidencias?pagina=${pagina}&limite=5${estadoParam}`);
         const data = await res.json();
         totalPaginasIncidencias = data.totalPaginas;
+
         const tbody = document.querySelector('#incidenciasTable tbody');
         tbody.innerHTML = '';
         data.data.forEach(inc => {
@@ -202,6 +228,8 @@ async function cargarIncidenciasRevisor(pagina = 1) {
             row.insertCell(4).textContent = inc.estado;
             row.insertCell(5).textContent = inc.comentario || '---';
             const cellAcciones = row.insertCell(6);
+
+            // Botones de cambio de estado según estado actual
             if (inc.estado === 'Pendiente') {
                 const btnProceso = document.createElement('button');
                 btnProceso.textContent = 'En Proceso';
@@ -215,11 +243,15 @@ async function cargarIncidenciasRevisor(pagina = 1) {
                 btnResuelto.onclick = () => cambiarEstadoConComentario(inc.id, 'Resuelto');
                 cellAcciones.appendChild(btnResuelto);
             }
+
+            // Subir foto
             const btnImagen = document.createElement('button');
             btnImagen.textContent = 'Subir foto';
             btnImagen.className = 'accion';
             btnImagen.onclick = () => subirImagen(inc.id);
             cellAcciones.appendChild(btnImagen);
+
+            // Ver foto si existe
             if (inc.imagen_path) {
                 const verImg = document.createElement('button');
                 verImg.textContent = 'Ver foto';
@@ -228,6 +260,8 @@ async function cargarIncidenciasRevisor(pagina = 1) {
                 cellAcciones.appendChild(verImg);
             }
         });
+
+        // Actualizar controles de paginación
         document.getElementById('pagina-actual').textContent = pagina;
         document.getElementById('total-paginas').textContent = totalPaginasIncidencias;
         document.getElementById('btn-anterior').disabled = (pagina === 1);
@@ -275,6 +309,7 @@ async function subirImagen(id) {
         const formData = new FormData();
         formData.append('imagen', file);
         try {
+            // Nota: usamos fetch sin el helper fetchWithAuth porque Content-Type debe ser multipart/form-data
             const res = await fetch(`/api/incidencias/${id}/imagen`, {
                 method: 'POST',
                 headers: { 'Authorization': `Bearer ${token}` },
@@ -292,10 +327,10 @@ async function subirImagen(id) {
 }
 
 // =========================================================================
-// VISTA ADMIN (incluye nueva pestaña Incidencias)
+// VISTA ADMIN (pestañas: Incidencias, Usuarios, Edificios, Salones, Estadísticas)
 // =========================================================================
 function inicializarAdmin() {
-    // Pestañas
+    // Configurar pestañas (tabs)
     const tabs = document.querySelectorAll('.tab-btn');
     tabs.forEach(btn => {
         btn.addEventListener('click', () => {
@@ -304,6 +339,8 @@ function inicializarAdmin() {
             document.getElementById(tabId).classList.add('active');
             tabs.forEach(b => b.classList.remove('active'));
             btn.classList.add('active');
+
+            // Cargar datos según la pestaña activada
             if (tabId === 'incidencias') cargarIncidenciasAdmin();
             if (tabId === 'usuarios') cargarUsuarios();
             if (tabId === 'edificios') cargarEdificiosAdmin();
@@ -312,14 +349,14 @@ function inicializarAdmin() {
         });
     });
 
-    // Cargar pestaña incidencias por defecto
+    // Cargar contenido inicial (por defecto pestaña incidencias)
     cargarIncidenciasAdmin();
     cargarUsuarios();
     cargarEdificiosAdmin();
     cargarSalonesAdmin(1);
     cargarEstadisticas();
 
-    // Eventos
+    // Eventos de formularios y botones
     document.getElementById('edificioForm').addEventListener('submit', agregarEdificio);
     document.getElementById('salonForm').addEventListener('submit', agregarSalon);
     document.getElementById('exportarCSV')?.addEventListener('click', () => exportarCSV('estadisticas'));
@@ -338,7 +375,7 @@ function inicializarAdmin() {
     });
 }
 
-// ========== INCIDENCIAS PARA ADMIN (con historial) ==========
+// ---------- INCIDENCIAS ADMIN (con historial) ----------
 async function cargarIncidenciasAdmin(pagina = 1) {
     paginaActualAdminIncidencias = pagina;
     try {
@@ -346,6 +383,7 @@ async function cargarIncidenciasAdmin(pagina = 1) {
         const res = await fetchWithAuth(`/api/incidencias?pagina=${pagina}&limite=10${estadoParam}`);
         const data = await res.json();
         totalPaginasAdminIncidencias = data.totalPaginas;
+
         const tbody = document.querySelector('#incidenciasAdminTable tbody');
         tbody.innerHTML = '';
         data.data.forEach(inc => {
@@ -357,11 +395,15 @@ async function cargarIncidenciasAdmin(pagina = 1) {
             row.insertCell(4).textContent = inc.estado;
             row.insertCell(5).textContent = inc.comentario || '---';
             const cellAcciones = row.insertCell(6);
+
+            // Botón para ver historial
             const btnHistorial = document.createElement('button');
             btnHistorial.textContent = 'Ver historial';
             btnHistorial.className = 'accion';
             btnHistorial.onclick = () => verHistorial(inc.id);
             cellAcciones.appendChild(btnHistorial);
+
+            // Ver foto si existe
             if (inc.imagen_path) {
                 const verImg = document.createElement('button');
                 verImg.textContent = 'Ver foto';
@@ -370,6 +412,7 @@ async function cargarIncidenciasAdmin(pagina = 1) {
                 cellAcciones.appendChild(verImg);
             }
         });
+
         document.getElementById('pagina-actual-admin').textContent = pagina;
         document.getElementById('total-paginas-admin').textContent = totalPaginasAdminIncidencias;
         document.getElementById('btn-anterior-admin').disabled = (pagina === 1);
@@ -384,7 +427,7 @@ function cambiarPaginaAdminIncidencias(delta) {
     cargarIncidenciasAdmin(nueva);
 }
 
-// ========== HISTORIAL (modal) ==========
+// ---------- HISTORIAL (modal dinámico) ----------
 async function verHistorial(id) {
     try {
         const res = await fetchWithAuth(`/api/incidencias/${id}/historial`);
@@ -400,22 +443,9 @@ async function verHistorial(id) {
         html += '</ul></div><button onclick="this.parentElement.remove()">Cerrar</button>';
         const modal = document.createElement('div');
         modal.className = 'modal';
-        modal.style.position = 'fixed';
-        modal.style.top = '0';
-        modal.style.left = '0';
-        modal.style.width = '100%';
-        modal.style.height = '100%';
-        modal.style.backgroundColor = 'rgba(0,0,0,0.5)';
-        modal.style.display = 'flex';
-        modal.style.alignItems = 'center';
-        modal.style.justifyContent = 'center';
-        modal.style.zIndex = '2000';
+        modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background-color:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;z-index:2000';
         const content = document.createElement('div');
-        content.style.backgroundColor = 'white';
-        content.style.padding = '20px';
-        content.style.borderRadius = '12px';
-        content.style.maxWidth = '500px';
-        content.style.width = '90%';
+        content.style.cssText = 'background-color:white;padding:20px;border-radius:12px;max-width:500px;width:90%';
         content.innerHTML = html;
         modal.appendChild(content);
         document.body.appendChild(modal);
@@ -425,7 +455,7 @@ async function verHistorial(id) {
     } catch (err) { mostrarNotificacion('Error al obtener historial', 'error'); }
 }
 
-// ========== EXPORTAR CSV (para admin) ==========
+// ---------- EXPORTAR CSV ----------
 async function exportarCSV(tipo) {
     try {
         let url = '/api/exportar/csv';
@@ -441,7 +471,7 @@ async function exportarCSV(tipo) {
     } catch (err) { mostrarNotificacion('Error al exportar', 'error'); }
 }
 
-// ========== CRUD USUARIOS, EDIFICIOS, SALONES, ESTADÍSTICAS ==========
+// ---------- CRUD USUARIOS (solo lectura) ----------
 async function cargarUsuarios() {
     try {
         const res = await fetchWithAuth('/api/usuarios');
@@ -458,6 +488,7 @@ async function cargarUsuarios() {
     } catch (err) { console.error(err); }
 }
 
+// ---------- CRUD EDIFICIOS ----------
 async function cargarEdificiosAdmin() {
     try {
         const res = await fetchWithAuth('/api/edificios');
@@ -522,6 +553,7 @@ async function eliminarEdificio(id) {
     }
 }
 
+// ---------- ESTADÍSTICAS ----------
 async function cargarEstadisticas() {
     try {
         const res = await fetchWithAuth('/api/estadisticas');
@@ -537,7 +569,7 @@ async function cargarEstadisticas() {
     } catch (err) { console.error(err); }
 }
 
-// ========== SALONES (con paginación) ==========
+// ---------- SALONES (con paginación y filtro por edificio) ----------
 async function cargarSalonesAdmin(pagina = 1) {
     paginaActualSalones = pagina;
     try {
@@ -546,6 +578,7 @@ async function cargarSalonesAdmin(pagina = 1) {
         const res = await fetchWithAuth(url);
         const data = await res.json();
         totalPaginasSalones = data.totalPaginas;
+
         const tbody = document.querySelector('#salonesTable tbody');
         tbody.innerHTML = '';
         data.data.forEach(salon => {
@@ -565,6 +598,7 @@ async function cargarSalonesAdmin(pagina = 1) {
             cellAcciones.appendChild(btnEditar);
             cellAcciones.appendChild(btnEliminar);
         });
+
         document.getElementById('pagina-actual-salones').textContent = pagina;
         document.getElementById('total-paginas-salones').textContent = totalPaginasSalones;
         document.getElementById('btn-anterior-salones').disabled = (pagina === 1);
