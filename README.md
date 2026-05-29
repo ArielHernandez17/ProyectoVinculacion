@@ -71,14 +71,6 @@ Permite a estudiantes reportar incidencias, al personal de limpieza cambiar esta
 - **Código fuente del reporte (LaTeX)** – Archivo `.tex` y recursos gráficos empaquetados en un ZIP.  
   *(Disponible en el repositorio junto al resto de entregables)*
 
-## Mejoras implementadas
-- Paginación en incidencias y salones.
-- Historial de cambios de estado (usuario, fecha, comentario).
-- Subida de imágenes por incidencia.
-- Exportación a CSV (solo administrador).
-- Notificaciones visuales (no alertas).
-- Contenedorización completa con Docker Compose.
-
 ## Créditos
 - **Desarrollador:** Ariel Hernández Velázquez (320259689)
 - **Institución:** FES Aragón, UNAM
